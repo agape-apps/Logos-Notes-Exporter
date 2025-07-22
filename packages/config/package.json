@@ -1,6 +1,6 @@
 {
   "name": "@logos-notes-exporter/config",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Configuration and default settings for Logos Notes Exporter",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@logos-notes-exporter/core",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Core library for Logos Notes Exporter - database access, conversion, and file operations",
   "type": "module",
   "main": "dist/index.js",

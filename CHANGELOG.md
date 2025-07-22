@@ -11,3 +11,6 @@
 - Release v1.2.0: improve Rich Text conversion, add image support, fix Electron build config 
 - 2024-07-20: Updated dependencies and fixed an issue where the `dist` directory was not found during builds by adding a dedicated build step to the release workflow.
 - 2025-07-23: Fix GitHub Actions release workflow by adding a missing build step for the CLI package. 
+- 2025-07-23: Fixed GitHub Actions build error on Windows by removing redundant mkdir -p commands from npm scripts.
+- 2025-07-23: Improved cross-platform compatibility by reverting to clean Unix commands and adding shell: bash to GitHub Actions workflow.
+- Release v1.2.1: fix GitHub Actions release workflow

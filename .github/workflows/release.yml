@@ -64,6 +64,7 @@ jobs:
 
       - name: Build binary
         run: pnpm --filter @logos-notes-exporter/cli run ${{ matrix.script }}
+        shell: bash
 
       - name: Verify built binary exists
         run: |
