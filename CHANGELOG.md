@@ -9,3 +9,5 @@
 - Release v1.0.9: various improvements to the XAML to Markdown conversion
 - Release v1.1.0: restructure project as monorepo and add Electron app to the CLI version
 - Release v1.2.0: improve Rich Text conversion, add image support, fix Electron build config 
+- 2024-07-20: Updated dependencies and fixed an issue where the `dist` directory was not found during builds by adding a dedicated build step to the release workflow.
+- 2025-07-23: Fix GitHub Actions release workflow by adding a missing build step for the CLI package. 

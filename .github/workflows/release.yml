@@ -54,6 +54,9 @@ jobs:
       - name: Build core package
         run: pnpm run build:core
 
+      - name: Build CLI package
+        run: pnpm --filter @logos-notes-exporter/cli run build
+
       - name: Create bin directories
         run: |
           mkdir -p bin/macos-x64 bin/macos-arm64 bin/windows-x64
