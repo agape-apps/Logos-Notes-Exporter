@@ -1,6 +1,6 @@
 {
   "name": "logos-notes-exporter-monorepo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Logos Notes Exporter - CLI and Electron applications with shared core",
   "private": true,
   "type": "module",
