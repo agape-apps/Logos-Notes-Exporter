@@ -1,0 +1,11 @@
+packages:
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - better-sqlite3
+  - bun
+  - electron
+  - electron-winstaller
+  - lzma-native
+  - unrs-resolver

@@ -1,0 +1,257 @@
+
+Table "Notes" {
+  "NoteId" INT [pk, increment]
+  "ExternalId" TEXT [not null]
+  "RevisionToken" TEXT
+  "ImportId" TEXT
+  "CreatedDate" TEXT [not null]
+  "ModifiedDate" TEXT
+  "CreatedBy" TEXT
+  "ModifiedBy" TEXT
+  "IsDeleted" BOOLEAN [not null, default: 0]
+  "IsTrashed" BOOLEAN [not null, default: 0]
+  "IsSyncing" BOOLEAN [not null, default: 0]
+  "Kind" INT [not null]
+  "ContentRichText" TEXT
+  "FoldedContent" TEXT
+  "NoteIndicatorId" INT
+  "NoteColorId" INT
+  "NoteStyleId" INT
+  "AnchorsJson" TEXT
+  "AnchorDataTypeId" INT
+  "AnchorLanguageId" INT
+  "AnchorResourceIdId" INT
+  "AnchorBibleBook" INT
+  "AnchorWorkflowTemplateIdId" INT
+  "AnchorWorkflowKeyId" INT
+  "AnchorGuideSectionId" INT
+  "AnchorInputIdId" INT
+  "TagsJson" TEXT
+  "NotebookExternalId" TEXT [not null]
+  "Rank" INT [not null, default: 0]
+  "Indent" INT [not null, default: 0]
+  "LabelsJson" TEXT
+  "ClippingTitleRichText" TEXT
+  "ClippingExcerptRichText" TEXT
+  "Role" INT [not null, default: 1]
+}
+
+Table "Notebooks" {
+  "NotebookId" INT [pk, increment]
+  "ExternalId" TEXT [not null]
+  "RevisionToken" TEXT
+  "CreatedDate" TEXT [not null]
+  "ModifiedDate" TEXT
+  "CreatedBy" TEXT
+  "ModifiedBy" TEXT
+  "IsDeleted" BOOLEAN [not null, default: 0]
+  "IsTrashed" BOOLEAN [not null, default: 0]
+  "IsSyncing" BOOLEAN [not null, default: 0]
+  "Title" TEXT
+  "ImportId" TEXT
+  "Role" INT [not null, default: 1]
+}
+
+Table "SyncItems" {
+  "SyncItemId" INT [pk, increment]
+  "NoteId" INT
+  "NotebookId" INT
+  "Kind" INT [not null]
+  "SyncDocId" TEXT
+  "LastUploadId" TEXT
+  "IsDeleted" BOOLEAN [not null, default: 0]
+  "RevisionNumber" INT
+  "Epoch" INT
+  "LastEditorId" INT
+  "SyncState" INT [not null, default: 0]
+  "ModifiedUtc" TEXT
+  "ExtraJson" TEXT
+}
+
+Table "NoteTags" {
+  "NoteId" INT [not null]
+  "TagId" INT [not null]
+}
+
+Table "Tags" {
+  "TagId" INT [pk, increment]
+  "Text" TEXT [not null]
+  "FoldedText" TEXT [not null]
+}
+
+Table "NoteAnchorTextRanges" {
+  "NoteAnchorTextRangeId" INT [pk, increment]
+  "ResourceIdId" INT [not null]
+  "ResourceVersionId" INT [not null]
+  "Offset" INT [not null]
+  "PastEnd" INT [not null]
+  "NoteId" INT [not null]
+  "AnchorIndex" INT [not null]
+  "WordNumberCount" INT [not null, default: 1]
+  "WordNumbers" BLOB
+}
+
+Table "NoteAnchorReferences" {
+  "NoteAnchorReferenceId" INT [pk, increment]
+  "DataTypeId" INT [not null]
+  "StartSortKey" BLOB [not null]
+  "PastEndSortKey" BLOB [not null]
+  "NoteId" INT [not null]
+  "AnchorIndex" INT [not null]
+}
+
+Table "NoteAnchorHeadwords" {
+  "NoteAnchorHeadwordId" INT [pk, increment]
+  "LanguageId" INT [not null]
+  "FoldedHeadword" TEXT [not null]
+  "NoteId" INT [not null]
+  "AnchorIndex" INT [not null]
+}
+
+Table "NoteAnchorFacetReferences" {
+  "NoteAnchorFacetReferenceId" INT [pk, increment]
+  "NoteId" INT [not null]
+  "AnchorIndex" INT [not null]
+  "DataTypeId" INT [not null]
+  "BibleBook" INT
+  "SortKey" BLOB [not null]
+  "Reference" TEXT [not null]
+}
+
+Table "NoteIndicators" {
+  "NoteIndicatorId" INT [pk, increment]
+  "Name" TEXT [not null]
+}
+
+Table "NoteColors" {
+  "NoteColorId" INT [pk, increment]
+  "Name" TEXT [not null]
+}
+
+Table "NoteStyles" {
+  "NoteStyleId" INT [pk, increment]
+  "Name" TEXT [not null]
+}
+
+Table "DataTypes" {
+  "DataTypeId" INT [pk, increment]
+  "Name" TEXT [not null]
+}
+
+Table "Languages" {
+  "LanguageId" INT [pk, increment]
+  "Name" TEXT [not null]
+}
+
+Table "ResourceIds" {
+  "ResourceIdId" INT [pk, increment]
+  "ResourceId" TEXT [not null]
+}
+
+Table "ResourceVersions" {
+  "ResourceVersionId" INT [pk, increment]
+  "ResourceId" TEXT [not null]
+  "Version" TEXT [not null]
+  "IsCurrent" BOOLEAN [not null, default: 0]
+}
+
+Table "WorkflowTemplateIds" {
+  "WorkflowTemplateIdId" INT [pk, increment]
+  "WorkflowTemplateId" TEXT [not null]
+}
+
+Table "WorkflowKeys" {
+  "WorkflowKeyId" INT [pk, increment]
+  "WorkflowKey" TEXT [not null]
+}
+
+Table "GuideSections" {
+  "GuideSectionId" INT [pk, increment]
+  "GuideSection" TEXT [not null]
+}
+
+Table "InputIds" {
+  "InputIdId" INT [pk, increment]
+  "InputId" TEXT [not null]
+}
+
+Table "NeedsAnchorUpdateNotes" {
+  "NoteId" INT [pk]
+  "RefCount" INT [not null]
+}
+
+Table "SyncingNotes" {
+  "NoteId" INT [not null]
+}
+
+Table "SyncingNotebooks" {
+  "NotebookId" INT [not null]
+}
+
+Table "SyncProperties" {
+  "SyncPropertyId" INT [pk, increment]
+  "Key" TEXT [not null]
+  "Value" TEXT [not null]
+}
+
+Table "SyncUploads" {
+  "SyncUploadId" INT [pk, increment]
+  "UploadId" TEXT [not null]
+  "UtcDateTime" TEXT [not null]
+}
+
+Table "BibleDataTypeInfo" {
+  "BibleDataTypeNames" TEXT [not null]
+}
+
+Ref:"NoteIndicators"."NoteIndicatorId" < "Notes"."NoteIndicatorId"
+
+Ref:"NoteColors"."NoteColorId" < "Notes"."NoteColorId"
+
+Ref:"NoteStyles"."NoteStyleId" < "Notes"."NoteStyleId"
+
+Ref:"DataTypes"."DataTypeId" < "Notes"."AnchorDataTypeId"
+
+Ref:"Languages"."LanguageId" < "Notes"."AnchorLanguageId"
+
+Ref:"ResourceIds"."ResourceIdId" < "Notes"."AnchorResourceIdId"
+
+Ref:"WorkflowTemplateIds"."WorkflowTemplateIdId" < "Notes"."AnchorWorkflowTemplateIdId"
+
+Ref:"WorkflowKeys"."WorkflowKeyId" < "Notes"."AnchorWorkflowKeyId"
+
+Ref:"GuideSections"."GuideSectionId" < "Notes"."AnchorGuideSectionId"
+
+Ref:"InputIds"."InputIdId" < "Notes"."AnchorInputIdId"
+
+Ref:"Notes"."NoteId" < "SyncItems"."NoteId"
+
+Ref:"Notebooks"."NotebookId" < "SyncItems"."NotebookId"
+
+Ref:"Notes"."NoteId" < "NoteTags"."NoteId"
+
+Ref:"Tags"."TagId" < "NoteTags"."TagId"
+
+Ref:"ResourceIds"."ResourceIdId" < "NoteAnchorTextRanges"."ResourceIdId"
+
+Ref:"ResourceVersions"."ResourceVersionId" < "NoteAnchorTextRanges"."ResourceVersionId"
+
+Ref:"Notes"."NoteId" < "NoteAnchorTextRanges"."NoteId"
+
+Ref:"DataTypes"."DataTypeId" < "NoteAnchorReferences"."DataTypeId"
+
+Ref:"Notes"."NoteId" < "NoteAnchorReferences"."NoteId"
+
+Ref:"Languages"."LanguageId" < "NoteAnchorHeadwords"."LanguageId"
+
+Ref:"Notes"."NoteId" < "NoteAnchorHeadwords"."NoteId"
+
+Ref:"Notes"."NoteId" < "NoteAnchorFacetReferences"."NoteId"
+
+Ref:"DataTypes"."DataTypeId" < "NoteAnchorFacetReferences"."DataTypeId"
+
+Ref:"Notes"."NoteId" < "NeedsAnchorUpdateNotes"."NoteId"
+
+Ref:"Notes"."NoteId" < "SyncingNotes"."NoteId"
+
+Ref:"Notebooks"."NotebookId" < "SyncingNotebooks"."NotebookId"

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "sourceMap": true,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "jsx": "react-jsx",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "composite": true,
+    "noEmit": false,
+    "paths": {
+      "@/*": ["./src/renderer/*"],
+      "@/lib/utils": ["./src/renderer/lib/utils.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", ".webpack"],
+  "references": [
+    { "path": "../config" },
+    { "path": "../core" }
+  ]
+}

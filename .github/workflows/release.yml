@@ -1,0 +1,170 @@
+name: Build and Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.1, v2.1.0, etc.
+
+permissions:
+  contents: write  # Required for creating releases and uploading assets
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: bun-macos-x64
+            script: binary:macx64
+            artifact: bin/macos-x64/LogosNotesExporter
+            name: LogosNotesExporter-macos-x64
+          - os: macos-latest
+            target: bun-macos-arm64
+            script: binary:macarm
+            artifact: bin/macos-arm64/LogosNotesExporter
+            name: LogosNotesExporter-macos-arm64
+          - os: windows-latest
+            target: bun-windows-x64
+            script: binary:windows
+            artifact: bin/windows-x64/LogosNotesExporter.exe
+            name: LogosNotesExporter-windows-x64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build core package
+        run: pnpm run build:core
+
+      - name: Create bin directories
+        run: |
+          mkdir -p bin/macos-x64 bin/macos-arm64 bin/windows-x64
+        shell: bash
+
+      - name: Build binary
+        run: pnpm --filter @logos-notes-exporter/cli run ${{ matrix.script }}
+
+      - name: Verify built binary exists
+        run: |
+          echo "Checking for binary at: ${{ matrix.artifact }}"
+          ls -la ${{ matrix.artifact }}
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.artifact }}
+
+  create-release:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Display structure of downloaded files
+        run: |
+          echo "=== Artifacts directory structure ==="
+          find ./artifacts -type f -ls
+          echo "=== Preparing files for release ==="
+
+      - name: Prepare release files
+        run: |
+          mkdir -p ./release-files
+          # Copy and rename files with correct names
+          cp ./artifacts/LogosNotesExporter-macos-x64/LogosNotesExporter ./release-files/LogosNotesExporter-macos-x64
+          cp ./artifacts/LogosNotesExporter-macos-arm64/LogosNotesExporter ./release-files/LogosNotesExporter-macos-arm64
+          cp ./artifacts/LogosNotesExporter-windows-x64.exe/LogosNotesExporter.exe ./release-files/LogosNotesExporter-windows-x64.exe
+          # Make macOS binaries executable
+          chmod +x ./release-files/LogosNotesExporter-macos-*
+          # Generate SHA256 checksums
+          cd ./release-files
+          sha256sum LogosNotesExporter-macos-x64 > LogosNotesExporter-macos-x64.sha256
+          sha256sum LogosNotesExporter-macos-arm64 > LogosNotesExporter-macos-arm64.sha256
+          sha256sum LogosNotesExporter-windows-x64.exe > LogosNotesExporter-windows-x64.exe.sha256
+          cd ..
+          echo "=== Final release files ==="
+          ls -la ./release-files/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## 🎉 Logos Notes Exporter ${{ github.ref_name }}
+            
+            ### 📦 Download
+
+            **Download** the appropriate binary for your platform:
+            - **🍎 macOS (Intel)**: `LogosNotesExporter-macos-x64`
+            - **🍎 macOS (Apple Silicon)**: `LogosNotesExporter-macos-arm64`  
+            - **🪟 Windows**: `LogosNotesExporter-windows-x64.exe`
+          
+            ### 🚀 Quick Start - use a Terminal
+
+            **macOS:**
+            1. **Install**: `chmod +x LogosNotesExporter-* && mv -v LogosNotesExporter-* /usr/local/bin/LogosNotesExporter`
+            2. **Run**: `LogosNotesExporter --help`
+            3. **Export your notes**: `LogosNotesExporter`
+
+            **Windows:**
+            1. **Run**: `LogosNotesExporter-windows-x64.exe --help`
+            2. **Export your notes**: `LogosNotesExporter-windows-x64.exe`
+            
+            ### 📖 Full Documentation
+            See [README.md](https://github.com/agape-apps/LogosNotesExport/blob/main/README.md) for complete usage instructions and examples.
+            
+            ### 🔧 What's New
+            See [CHANGES.md](https://github.com/agape-apps/LogosNotesExport/blob/main/CHANGES.md) for details.
+
+            ### 🔐 Verify Integrity (Recommended)
+
+            **Verify your download using SHA256 checksums:**
+
+            **macOS/Linux**
+            ```bash
+            sha256sum -c LogosNotesExporter-*.sha256
+            ```
+            
+            **Windows (PowerShell)**
+            ```powershell
+            Get-FileHash LogosNotesExporter-windows-x64.exe -Algorithm SHA256
+            ```
+            - Compare with content of LogosNotesExporter-windows-x64.exe.sha256
+            ```
+          files: |
+            ./release-files/LogosNotesExporter-macos-x64
+            ./release-files/LogosNotesExporter-macos-x64.sha256
+            ./release-files/LogosNotesExporter-macos-arm64
+            ./release-files/LogosNotesExporter-macos-arm64.sha256
+            ./release-files/LogosNotesExporter-windows-x64.exe
+            ./release-files/LogosNotesExporter-windows-x64.exe.sha256
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

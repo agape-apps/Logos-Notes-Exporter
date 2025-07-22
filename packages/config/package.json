@@ -1,0 +1,32 @@
+{
+  "name": "@logos-notes-exporter/config",
+  "version": "1.1.0",
+  "description": "Configuration and default settings for Logos Notes Exporter",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist && rm -f tsconfig.tsbuildinfo"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "keywords": [
+    "logos",
+    "notes",
+    "configuration",
+    "settings"
+  ],
+  "author": "Logos Notes Exporter Team",
+  "license": "MIT"
+} 

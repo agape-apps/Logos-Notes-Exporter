@@ -1,0 +1,53 @@
+{
+  "name": "@logos-notes-exporter/cli",
+  "version": "1.1.0",
+  "description": "A TypeScript CLI tool to export Logos Bible Software notes to Markdown files with YAML frontmatter",
+  "type": "module",
+   "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "logos-export": "dist/cli.js"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "tsc && bun build src/cli.ts --outdir dist --target bun",
+    "start": "bun run dist/cli.js",
+    "test": "bun test",
+    "validate:binary": "test -d dist || (echo 'CLI not built. Run: pnpm run build' && exit 1)",
+    "binary:macx64": "pnpm run validate:binary && mkdir -p ../../bin/macos-x64 && bun build --compile --target=bun-macos-x64 src/cli.ts --outfile ../../bin/macos-x64/LogosNotesExporter && echo 'macOS x64 binary created successfully'",
+    "binary:macarm": "pnpm run validate:binary && mkdir -p ../../bin/macos-arm64 && bun build --compile --target=bun-macos-arm64 src/cli.ts --outfile ../../bin/macos-arm64/LogosNotesExporter && echo 'macOS ARM64 binary created successfully'",
+    "binary:windows": "pnpm run validate:binary && mkdir -p ../../bin/windows-x64 && bun build --compile --target=bun-windows-x64 src/cli.ts --outfile ../../bin/windows-x64/LogosNotesExporter.exe && echo 'Windows x64 binary created successfully'",
+    "binary:all": "echo 'Creating binaries for all platforms...' && pnpm run binary:macx64 && pnpm run binary:macarm && pnpm run binary:windows && echo 'All platform binaries created successfully!'",
+    "clean": "rm -rf dist && rm -f tsconfig.tsbuildinfo"
+  },
+  "keywords": [
+    "logos",
+    "bible",
+    "notes",
+    "markdown",
+    "export",
+    "converter",
+    "cli",
+    "typescript",
+    "bun"
+  ],
+  "author": "Logos Notes Exporter",
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "dependencies": {
+    "@logos-notes-exporter/config": "workspace:*",
+    "@logos-notes-exporter/core": "workspace:*",
+    "bun": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "src/**/*",
+    "dist/**/*",
+    "README.md"
+  ]
+}
