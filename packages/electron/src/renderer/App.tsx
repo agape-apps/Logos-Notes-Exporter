@@ -50,15 +50,8 @@ const App: React.FC = () => {
           setMode(savedData.mode as AppMode);
         }
 
-        // Auto-detect database
-        const detectedDb = await window.electronAPI.detectDatabase();
-        if (detectedDb) {
-          setSelectedDatabasePath(detectedDb);
-          addLogMessage(`🔍 Database auto-detected: ${detectedDb}`);
-        } else {
-          addLogMessage('⚠️ No database auto-detected. Please select manually.');
-        }
-
+        // Database detection is handled by main process on startup
+        // The database-detected IPC event will set the selectedDatabasePath
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize app:', error);

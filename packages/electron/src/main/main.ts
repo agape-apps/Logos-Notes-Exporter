@@ -60,7 +60,6 @@ const createWindow = (): void => {
           const detectedPath = getDefaultDatabasePath();
           if (detectedPath && mainWindow) {
             mainWindow.webContents.send('database-detected', detectedPath);
-            mainWindow.webContents.send('output-log', `✅ Database detected: ${detectedPath}`);
           } else if (mainWindow) {
             mainWindow.webContents.send('output-log', '⚠️ No database auto-detected. Use "Select Database" to choose manually.');
           }

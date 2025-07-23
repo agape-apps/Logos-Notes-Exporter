@@ -22,3 +22,4 @@
 - 2025-07-23: Added icon to BrowserWindow constructor for development mode - Forge packagerConfig only applies to built apps, not dev mode
 - 2025-07-23: Added installer-specific icon configurations to Forge makers (MakerSquirrel, MakerDeb, MakerRpm) for proper packaging
 - 2025-07-23: Installed missing @electron-forge/shared-types package to fix TypeScript definitions
+- 2025-07-23: fix: removed duplicate database detection messages in Electron app - eliminated redundant main process log, now shows clean 2-message flow
