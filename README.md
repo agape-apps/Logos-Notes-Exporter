@@ -43,7 +43,7 @@ This tool extracts notes from Logos Bible Software's NotesTool database and conv
 - **SQLite dependency**: Requires access to the NotesTool SQLite database
 - **Version compatibility**: Tested with recent Logos 10 desktop versions
 - **Apocrypha**: May not include all available book names. Only tested with Apocrypha book names as used by NSRV
-- **Rich text**: Complex formatting may not convert fully from XAML to Markdown (see Common Rich Text Features in Logos Notes)
+- **Rich text**: Complex formatting may not convert fully from XAML to Markdown [see Common Rich Text Features in Logos Notes](docs/Rich-Text.md)
   - Indents are converted to multilevel block quotes (or a non-breaking space followed by 4 spaces for each level) up to the 6th level
   - For Highlights the verse range is shown for Bibles, highlights in books lack a specific reference
 
