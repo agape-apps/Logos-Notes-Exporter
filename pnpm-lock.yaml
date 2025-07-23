@@ -189,6 +189,9 @@ importers:
       '@electron-forge/plugin-webpack':
         specifier: ^7.8.1
         version: 7.8.1
+      '@electron-forge/shared-types':
+        specifier: ^7.8.1
+        version: 7.8.1
       '@electron/fuses':
         specifier: ^1.8.0
         version: 1.8.0

@@ -17,3 +17,8 @@
 - 2025-07-23: Enhanced CLI --list-databases command to show both NotesTool and Catalog databases, removed unused development location
 - 2025-07-23: Implemented cross-platform default export location using username/Documents/Logos-Exported-Notes for both CLI and Electron
 - 2025-07-23: Fixed CLI and Electron output directory issues - CLI now correctly uses cross-platform Documents path, Electron webpack build resolved
+- 2025-07-23: Added app icons to Electron app for macOS and Windows using 512x512 PNG configured in Electron Forge packagerConfig
+- 2025-07-23: Fixed Electron app icon configuration - switched from electron-builder to Electron Forge packagerConfig with proper icon path
+- 2025-07-23: Added icon to BrowserWindow constructor for development mode - Forge packagerConfig only applies to built apps, not dev mode
+- 2025-07-23: Added installer-specific icon configurations to Forge makers (MakerSquirrel, MakerDeb, MakerRpm) for proper packaging
+- 2025-07-23: Installed missing @electron-forge/shared-types package to fix TypeScript definitions

@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { app, BrowserWindow } from 'electron';
 import electronSquirrelStartup from 'electron-squirrel-startup';
 import { loadSettings, saveSettings } from './settings';
@@ -27,6 +28,8 @@ const createWindow = (): void => {
     height: windowSize.height,
     minWidth: 900,
     minHeight: 600,
+    // TODO: Icon for development mode (not working)
+    icon: path.join(__dirname, '../../images/icon.icns'), 
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
