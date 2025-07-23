@@ -295,7 +295,7 @@ const App: React.FC = () => {
         
         {/* Header */}
         <div className="border-b">
-          <div className="container mx-auto px-6 py-4">
+          <div className="px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Logos Notes Exporter</h1>
@@ -336,38 +336,38 @@ const App: React.FC = () => {
           </div>
         </div>
 
-              {/* Main Content */}
-              <div className="container mx-auto px-6 py-6">
-                {mode === "basic" ? (
-                  <BasicMode
-                    selectedDatabasePath={selectedDatabasePath || null}
-                    isExporting={isExporting}
-                    exportProgress={exportProgress}
-                    exportMessage={exportMessage}
-                    lastExportSuccess={lastExportSuccess}
-                    outputPath={outputPath || null}
-                    logMessages={logMessages}
-                    onExport={handleExport}
-                    onOpenFolder={handleOpenFolder}
-                    onSelectDatabase={handleSelectDatabase}
-                  />
-                ) : (
-                  <AdvancedMode
-                    settings={settings}
-                    selectedDatabasePath={selectedDatabasePath || null}
-                    isExporting={isExporting}
-                    lastExportSuccess={lastExportSuccess}
-                    outputPath={outputPath || null}
-                    logMessages={logMessages}
-                    onSettingsChange={setSettings}
-                    onExport={handleExport}
-                    onOpenFolder={handleOpenFolder}
-                    onSelectDatabase={handleSelectDatabase}
-                    onSelectOutputDirectory={handleSelectOutputDirectory}
-                    onRestoreDefaults={handleRestoreDefaults}
-                  />
-                )}
-              </div>
+        {/* Main Content */}
+        <div className="px-8 py-6 h-[calc(100vh-140px)]">
+          {mode === "basic" ? (
+            <BasicMode
+              selectedDatabasePath={selectedDatabasePath || null}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+              exportMessage={exportMessage}
+              lastExportSuccess={lastExportSuccess}
+              outputPath={outputPath || null}
+              logMessages={logMessages}
+              onExport={handleExport}
+              onOpenFolder={handleOpenFolder}
+              onSelectDatabase={handleSelectDatabase}
+            />
+          ) : (
+            <AdvancedMode
+              settings={settings}
+              selectedDatabasePath={selectedDatabasePath || null}
+              isExporting={isExporting}
+              lastExportSuccess={lastExportSuccess}
+              outputPath={outputPath || null}
+              logMessages={logMessages}
+              onSettingsChange={setSettings}
+              onExport={handleExport}
+              onOpenFolder={handleOpenFolder}
+              onSelectDatabase={handleSelectDatabase}
+              onSelectOutputDirectory={handleSelectOutputDirectory}
+              onRestoreDefaults={handleRestoreDefaults}
+            />
+          )}
+        </div>
     </div>
   </TooltipProvider>
   );

@@ -26,8 +26,8 @@ const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     width: windowSize.width,
     height: windowSize.height,
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: 1024,
+    minHeight: 700,
     // TODO: Icon for development mode (not working)
     icon: path.join(__dirname, '../../images/icon.icns'), 
     webPreferences: {

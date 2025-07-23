@@ -23,3 +23,6 @@
 - 2025-07-23: Added installer-specific icon configurations to Forge makers (MakerSquirrel, MakerDeb, MakerRpm) for proper packaging
 - 2025-07-23: Installed missing @electron-forge/shared-types package to fix TypeScript definitions
 - 2025-07-23: fix: removed duplicate database detection messages in Electron app - eliminated redundant main process log, now shows clean 2-message flow
+2025-07-23 - fix: UI layout improvements - 32px margins, 1024x700 min window, modern blue theme, simplified output log
+2025-07-23 - fix: UI spacing corrections - exact 32px margins, proper button text sizing, forced blue theme colors with !important CSS overrides
+2025-07-23 - fix: exact 32px bottom spacing, light gray inactive switches/tooltips

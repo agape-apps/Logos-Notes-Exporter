@@ -32,9 +32,9 @@ export const BasicMode: React.FC<BasicModeProps> = ({
   onSelectDatabase,
 }) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-200px)]">
-      {/* Left Column - Controls (40%) */}
-      <div className="lg:col-span-2 space-y-4">
+    <div className="flex gap-8 h-full">
+      {/* Left Column - Controls */}
+      <div className="w-96 flex-shrink-0 space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Export Your Logos Notes</CardTitle>
@@ -55,8 +55,8 @@ export const BasicMode: React.FC<BasicModeProps> = ({
         </Card>
       </div>
 
-      {/* Right Column - Output Log (60%) */}
-      <div className="lg:col-span-3">
+      {/* Right Column - Output Log */}
+      <div className="flex-1">
         <OutputLog logMessages={logMessages} />
       </div>
     </div>

@@ -46,9 +46,9 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[calc(100vh-200px)]">
-      {/* Left Column - Advanced Settings (40%) */}
-      <div className="lg:col-span-2 space-y-4 overflow-y-auto">
+    <div className="flex gap-8 h-full">
+      {/* Left Column - Advanced Settings */}
+      <div className="w-96 flex-shrink-0 space-y-4 overflow-y-auto">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -493,8 +493,8 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
               <div className="flex gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={onRestoreDefaults}>
-                      🔄 Restore Defaults
+                    <Button variant="outline" size="sm" className="flex-1 min-w-0" onClick={onRestoreDefaults}>
+                      <span className="text-xs">🔄 Restore Defaults</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Reset all settings to their default values</TooltipContent>
@@ -528,8 +528,8 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
         </Card>
       </div>
 
-      {/* Right Column - Output Log (60%) */}
-      <div className="lg:col-span-3">
+      {/* Right Column - Output Log */}
+      <div className="flex-1">
         <OutputLog logMessages={logMessages} />
       </div>
     </div>

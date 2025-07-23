@@ -31,11 +31,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
   onSelectDatabase,
 }) => {
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Convert your Logos notes to Markdown files for use in other applications.
-      </p>
-      
+    <div className="space-y-4">      
       {/* Database Status */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
