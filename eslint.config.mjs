@@ -18,6 +18,7 @@ export default [
         ecmaVersion: 2020,
         sourceType: 'module',
         project: [
+          './packages/config/tsconfig.json',
           './packages/cli/tsconfig.json',
           './packages/core/tsconfig.json',
           './packages/electron/tsconfig.json'
@@ -60,6 +61,7 @@ export default [
       'import/resolver': {
         typescript: {
           project: [
+            './packages/config/tsconfig.json',
             './packages/cli/tsconfig.json',
             './packages/core/tsconfig.json',
             './packages/electron/tsconfig.json'
@@ -77,6 +79,7 @@ export default [
       parser: typescriptParser,
       parserOptions: {
         project: [
+          './packages/config/tsconfig.json',
           './packages/cli/tsconfig.json',
           './packages/core/tsconfig.json',
           './packages/electron/tsconfig.json'
@@ -131,6 +134,7 @@ export default [
       'import/resolver': {
         typescript: {
           project: [
+            './packages/config/tsconfig.json',
             './packages/cli/tsconfig.json',
             './packages/core/tsconfig.json',
             './packages/electron/tsconfig.json'

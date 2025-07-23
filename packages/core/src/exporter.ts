@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
 import type { XamlConversionStats } from './markdown-converter.js';
 import type { OrganizationStats, NotebookGroup } from './notebook-organizer.js';
 import type { ValidationResult, ValidationIssue } from './validator.js';
@@ -129,7 +130,7 @@ export class LogosNotesExporter {
     
     // Configure file organizer
     const fileOptions: Partial<FileStructureOptions> = {
-      baseDir: options.output || './Logos-Exported-Notes',
+      baseDir: options.output || DEFAULT_CONFIG.export.outputDirectory,
       organizeByNotebooks: options.organizeByNotebooks !== false,
       includeDateFolders: options.includeDateFolders || false,
       createIndexFiles: options.createIndexFiles !== false,

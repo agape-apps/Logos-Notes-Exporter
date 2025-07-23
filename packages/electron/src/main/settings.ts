@@ -60,7 +60,7 @@ function settingsFileToExportSettings(settingsFile: SettingsFile): ExportSetting
   return {
     databasePath: settingsFile.database.customPath,
     autoDetectDatabase: settingsFile.database.autoDetect ?? true,
-    outputDirectory: settingsFile.output.directory || getDefaultOutputDirectory(),
+    outputDirectory: settingsFile.output.directory || DEFAULT_CONFIG.export.outputDirectory,
     organizeByNotebooks: settingsFile.output.organizeByNotebooks ?? true,
     includeDateFolders: settingsFile.output.includeDateFolders ?? false,
     createIndexFiles: settingsFile.output.createIndexFiles ?? true,
@@ -87,9 +87,9 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
     if (!fs.existsSync(settingsPath)) {
       console.log('Settings file does not exist, using defaults');
       const defaultSettings: ExportSettings = {
-        autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
-        outputDirectory: getDefaultOutputDirectory(),
-        organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
+      autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
+      outputDirectory: DEFAULT_CONFIG.export.outputDirectory,
+      organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
         includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
         createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,
         skipHighlights: DEFAULT_CONFIG.export.skipHighlights,
@@ -130,7 +130,7 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
     // Return defaults on error
     const defaultSettings: ExportSettings = {
       autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
-      outputDirectory: getDefaultOutputDirectory(),
+      outputDirectory: DEFAULT_CONFIG.export.outputDirectory,
       organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
       includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
       createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,
@@ -181,17 +181,7 @@ export function saveSettings(settings: ExportSettings, mode: AppMode, windowSize
   }
 }
 
-/**
- * Gets the default output directory based on the platform
- */
-function getDefaultOutputDirectory(): string {
-  const homeDir = app.getPath('home');
-  const documentsDir = app.getPath('documents');
-  
-  // Use Documents folder if available, otherwise use home directory
-  const baseDir = fs.existsSync(documentsDir) ? documentsDir : homeDir;
-  return path.join(baseDir, 'Logos-Exported-Notes');
-}
+
 
 /**
  * Deletes the settings file (for reset functionality)

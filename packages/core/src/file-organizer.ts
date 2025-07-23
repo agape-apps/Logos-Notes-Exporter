@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
 import type { OrganizedNote, NotebookGroup, OrganizationStats } from './types.js';
 import { BibleReferenceDecoder } from './reference-decoder.js';
 import type { ResourceId } from './notestool-database.js';
@@ -47,7 +48,7 @@ export interface DirectoryStructure {
 }
 
 export const DEFAULT_FILE_OPTIONS: FileStructureOptions = {
-  baseDir: './Logos-Exported-Notes',
+  baseDir: DEFAULT_CONFIG.export.outputDirectory,
   organizeByNotebooks: true,
   includeDateFolders: false,
   flattenSingleNotebook: false,

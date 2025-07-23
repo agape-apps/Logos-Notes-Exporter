@@ -15,3 +15,5 @@
 - 2025-07-23: Improved cross-platform compatibility by reverting to clean Unix commands and adding shell: bash to GitHub Actions workflow.
 - Release v1.2.1: fix GitHub Actions release workflow
 - 2025-07-23: Enhanced CLI --list-databases command to show both NotesTool and Catalog databases, removed unused development location
+- 2025-07-23: Implemented cross-platform default export location using username/Documents/Logos-Exported-Notes for both CLI and Electron
+- 2025-07-23: Fixed CLI and Electron output directory issues - CLI now correctly uses cross-platform Documents path, Electron webpack build resolved

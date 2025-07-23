@@ -5,24 +5,24 @@
 - [x] Electron package: https://www.electronjs.org/docs/latest/tutorial/forge-overview
 - [ ] Electron publish: https://www.electronjs.org/docs/latest/tutorial/tutorial-publishing-updating
 - [ ] test publishing
+- APP LOGO
 
 ## BUGS & ISSUES
 
-- [ ] check if this is still used: LogosDocuments
-- [ ] consistent default export location for Notes (not relative to command) 
+- [x] remove unused dev db location LogosDocuments
+- [x] use consistent default export location for Notes macOS & Windows Documents
 - [ ] do we really want to add tags by default? (Notebook name, etc.)
 - [x] Output Log cleanup duplication: 🚀 Starting export... 🚀 Starting export... Starting Logos Notes export...
-- [ ] 
+- [ ] Consider changing LogosNotesExporter CLI command to Logos-Notes-Exporter for consistency (optional)
 - [ ] 
 
-- [ ] when exporting notes after the first start the screen refreshes and the log disappears
-  - happened after centralizing the settings
-- [x] fix src/xaml-converter.ts, possibly too many blank lines in some cases, but mostly looking good
+- [x] when exporting notes after the first start the screen refreshes and the log disappears
+- [ ] check src/xaml-converter.ts, possibly too many blank lines in some cases, but mostly looking good
 - [ ] invalid offsets (-1) have been fixed but the book link is not that useful - check other options:
-  - anchorLink: "https://app.logos.com/books/LLS%3A1.0.20"
-  - in Logos-Exported-Notes/Conditional Immortality/LLS-1.0.20-0736.md
-  - add a tag or note?
-- [ ] Markdown: is it ok for list items to have a double space at the line ending?
+      - anchorLink: "https://app.logos.com/books/LLS%3A1.0.20"
+      - in Logos-Exported-Notes/Conditional Immortality/LLS-1.0.20-0736.md
+      - add a tag or note?
+- [x] Markdown: is it ok for list items to have a double space at the line ending? YES, OK
 
 ### Issues to check 
 
@@ -34,22 +34,22 @@
 
 ## TESTING & ERROR HANDLING
 
-- [ ] testing with jest unit tests
+- [ ] testing with jest unit tests, including actual XAML samples
 - [ ] more testing on Windows
 - [ ] test on Apple Silicon
-- [ ] improve error handling, for databases, for conversion issues, for download/network issues
+- [ ] improve error handling, for databases, for conversion issues, for download/network issues CHECK
+- [ ] End to End testing with real sample database files
 
 ## SETTINGS & CONFIGURATION
 
 - The CLI settings have their own defaults in spite of the centralized settings file, as the default is to run without flags. It would take a lot of changes to automatically follow each settings change in the CLI. Currently only done for including highlight notes, so the default can be easily changed. 
-
 - a different CLI UI design would be needed to make it similar to the Electron version, but that is not really needed
 
 ## EXPORT OPTIONS & FEATURES
 
+- [ ] Export a Notebook into one Markdown file 
 - [ ] Export just one Notebook (useful for big collections)
 - [ ] Export by Tags (not tested tags yet) OPTIONAL
-- [ ] Export a Notebook into one Markdown file 
 - [ ] Include the scripture reference in notes text
 - [ ] add more flexible conversion options (depending on Markdown target) (OPTIONS IN SETTINGS)
 - [ ] Simplify Options

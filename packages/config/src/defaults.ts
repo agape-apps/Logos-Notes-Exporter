@@ -5,6 +5,36 @@
  * CLI, Electron, and core packages. Any new settings should be added here first.
  */
 
+// Declare global for TypeScript
+declare const require: any;
+
+/**
+ * Get the default output directory path cross-platform
+ * Returns user's Documents/Logos-Exported-Notes on both macOS and Windows
+ * In browser environments, returns a fallback path
+ */
+function getDefaultOutputDirectory(): string {
+  // Check if we're in a Node.js environment with require available
+  if (typeof require !== 'undefined' && typeof process !== 'undefined' && process.versions) {
+    try {
+      const os = require('os');
+      const path = require('path');
+      return path.join(os.homedir(), 'Documents', 'Logos-Exported-Notes');
+    } catch (error) {
+      // Fallback if Node.js modules are not available
+      console.warn('⚠️  Failed to access Node.js modules for cross-platform path detection. Using fallback path.');
+      console.warn(`   Error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    // Browser environment detected
+    console.warn('⚠️  Browser environment detected. Using relative fallback path instead of user Documents folder.');
+  }
+  
+  // Fallback for browser environments or when Node.js modules fail
+  console.log('📁 Using fallback output directory: ./Logos-Exported-Notes');
+  return './Logos-Exported-Notes';
+}
+
 export const DEFAULT_CONFIG = {
   /** XAML to Markdown conversion settings */
   xaml: {
@@ -60,9 +90,8 @@ export const DEFAULT_CONFIG = {
   export: {
     /** Auto-detect database location */
     autoDetectDatabase: true,
-    /** Default output directory */
-    // TODO: make this a path relative to the user home directory on macOS and Windows
-    outputDirectory: '/Users/christian/Documents/Logos-Exported-Notes',
+    /** Default output directory - cross-platform user Documents folder */
+    outputDirectory: getDefaultOutputDirectory(),
     /** Organize notes by notebooks */
     organizeByNotebooks: true,
     /** Create date-based subdirectories */

@@ -19,7 +19,8 @@
     "dist"
   ],
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "@types/node": "^20.0.0"
   },
   "keywords": [
     "logos",

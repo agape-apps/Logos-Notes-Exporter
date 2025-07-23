@@ -85,41 +85,40 @@ OPTIONS:
   
   PROCESSING:
   --verbose, -v         Verbose output
-  --dry-run            Show what would be done without writing files
-  --help, -h           Show this help
-  --version            Show version
+  --dry-run             Show what would be done without writing files
+  --help, -h            Show this help
+  --version             Show version
 
 EXAMPLES:
-  # Basic export (auto-finds database)
+  # Basic export (auto-locates database)
   LogosNotesExporter
+
+  # Include highlight notes as well
+  LogosNotesExporter --include-highlights
   
-  # List available database locations
-  LogosNotesExporter --list-databases
-  
-  # Export with custom database
-  LogosNotesExporter --database ./path/to/notestool.db
-  
-  # Custom output with date folders
-  LogosNotesExporter -o ./my-notes --date-folders
+  # Custom output directory location
+  LogosNotesExporter --output ./My-Notes
   
   # Dry run to see what would be exported
   LogosNotesExporter --dry-run --verbose
   
   # Export without frontmatter and show metadata in content
   LogosNotesExporter --no-frontmatter --show-metadata
+
+  # List available database locations
+  LogosNotesExporter --list-databases
   
-  # Include highlight notes (overrides default skip behavior)
-  LogosNotesExporter --include-highlights
+  # Export using a custom database location
+  LogosNotesExporter --database ./path/to/notestool.db
 
 NOTES:
+  - All database operations are READ-ONLY for safety, Logos can continue to be used while exporting
   - Database is auto-detected in standard Logos installation locations
-  - Windows: %LOCALAPPDATA%\\Logos\\Documents\\{random-id}\\NotesToolManager\\notestool.db
-  - macOS: ~/Library/Application Support/Logos4/Documents/{random-id}/NotesToolManager/notestool.db
-  - Use --list-databases to see all available locations
-  - All database operations are READ-ONLY for safety
+    - Windows: %LOCALAPPDATA%\\Logos\\Documents\\{random-id}\\NotesToolManager\\notestool.db
+    - macOS: ~/Library/Application Support/Logos4/Documents/{random-id}/NotesToolManager/notestool.db
+    - Use --list-databases to see all available locations
   - Output files will be organized by notebooks unless --no-organize-notebooks
-  - Existing files will be overwritten
-  - Bible references are always included when available
+  - Existing files will be overwritten by default
 `;
 
 /**
