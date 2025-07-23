@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { app } from 'electron';
 import * as yaml from 'yaml';
 import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
@@ -14,6 +15,14 @@ const SETTINGS_VERSION = '1.0';
 function getSettingsPath(): string {
   const userDataPath = app.getPath('userData');
   return path.join(userDataPath, SETTINGS_FILE_NAME);
+}
+
+/**
+ * Gets the correct absolute path for the default output directory
+ * This ensures we always use the absolute path in the main process
+ */
+function getAbsoluteOutputDirectory(): string {
+  return path.join(os.homedir(), 'Documents', 'Logos-Exported-Notes');
 }
 
 /**
@@ -57,10 +66,15 @@ function createDefaultSettingsFile(settings: ExportSettings, mode: AppMode = 'ba
  * Converts SettingsFile to ExportSettings format
  */
 function settingsFileToExportSettings(settingsFile: SettingsFile): ExportSettings {
+  // Ensure we use absolute path if the saved path is the relative fallback
+  const outputDirectory = settingsFile.output.directory === './Logos-Exported-Notes' 
+    ? getAbsoluteOutputDirectory() 
+    : (settingsFile.output.directory || getAbsoluteOutputDirectory());
+    
   return {
     databasePath: settingsFile.database.customPath,
     autoDetectDatabase: settingsFile.database.autoDetect ?? true,
-    outputDirectory: settingsFile.output.directory || DEFAULT_CONFIG.export.outputDirectory,
+    outputDirectory: outputDirectory,
     organizeByNotebooks: settingsFile.output.organizeByNotebooks ?? true,
     includeDateFolders: settingsFile.output.includeDateFolders ?? false,
     createIndexFiles: settingsFile.output.createIndexFiles ?? true,
@@ -88,7 +102,7 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
       console.log('Settings file does not exist, using defaults');
       const defaultSettings: ExportSettings = {
       autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
-      outputDirectory: DEFAULT_CONFIG.export.outputDirectory,
+      outputDirectory: getAbsoluteOutputDirectory(), // Use absolute path
       organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
         includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
         createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,
@@ -120,8 +134,15 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
       // Add migration logic here if needed in the future
     }
 
+    const loadedSettings = settingsFileToExportSettings(settingsFile);
+    
+    // Ensure output directory is absolute if it's still relative
+    if (loadedSettings.outputDirectory === './Logos-Exported-Notes') {
+      loadedSettings.outputDirectory = getAbsoluteOutputDirectory();
+    }
+
     return {
-      settings: settingsFileToExportSettings(settingsFile),
+      settings: loadedSettings,
       mode: settingsFile.ui.mode,
       windowSize: settingsFile.ui.windowSize,
     };
@@ -130,7 +151,7 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
     // Return defaults on error
     const defaultSettings: ExportSettings = {
       autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
-      outputDirectory: DEFAULT_CONFIG.export.outputDirectory,
+      outputDirectory: getAbsoluteOutputDirectory(), // Use absolute path
       organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
       includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
       createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,

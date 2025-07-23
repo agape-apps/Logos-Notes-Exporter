@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAppStore } from '../hooks/useAppStore';
+import { DEFAULT_SETTINGS } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ExportControls } from './ExportControls';
 import { OutputLog } from './OutputLog';
@@ -31,6 +33,16 @@ export const BasicMode: React.FC<BasicModeProps> = ({
   onOpenFolder,
   onSelectDatabase,
 }) => {
+  const { settings } = useAppStore();
+  
+  // Helper function to check if settings have been changed from defaults
+  const hasCustomSettings = () => {
+    return Object.keys(DEFAULT_SETTINGS).some(key => {
+      const settingsKey = key as keyof typeof DEFAULT_SETTINGS;
+      return settings[settingsKey] !== DEFAULT_SETTINGS[settingsKey];
+    });
+  };
+
   return (
     <div className="flex gap-8 h-full">
       {/* Left Column - Controls */}
@@ -38,6 +50,9 @@ export const BasicMode: React.FC<BasicModeProps> = ({
         <Card>
           <CardHeader>
             <CardTitle>Export Your Logos Notes</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {hasCustomSettings() ? 'With Custom Settings' : 'With Default Settings'}
+            </p>
           </CardHeader>
           <CardContent>
             <ExportControls

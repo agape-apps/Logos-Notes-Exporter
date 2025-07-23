@@ -297,11 +297,7 @@ const App: React.FC = () => {
         <div className="border-b">
           <div className="px-8 py-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Logos Notes Exporter</h1>
-                <p className="text-sm text-muted-foreground">Convert your Logos notes to Markdown files</p>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button 
@@ -330,14 +326,20 @@ const App: React.FC = () => {
                     }
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-xs text-muted-foreground">v1.0.0</div>
+              </div>
+              <div className="text-center flex-1">
+                <h1 className="text-2xl font-bold text-foreground">Logos Notes Exporter</h1>
+                <p className="text-sm text-muted-foreground">Convert your Logos notes to Markdown files</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-muted-foreground">v1.2.1</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="px-8 py-6 h-[calc(100vh-140px)]">
+        <div className="px-8 py-8 h-[calc(100vh-88px)]">
           {mode === "basic" ? (
             <BasicMode
               selectedDatabasePath={selectedDatabasePath || null}

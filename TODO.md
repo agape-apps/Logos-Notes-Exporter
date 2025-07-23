@@ -4,11 +4,11 @@
 
 - [x] Electron package: https://www.electronjs.org/docs/latest/tutorial/forge-overview
 - [ ] Electron publish: https://www.electronjs.org/docs/latest/tutorial/tutorial-publishing-updating
-- [ ] test publishing
-- APP LOGO
+- [ ] APP LOGO works
 
 ## BUGS & ISSUES
 
+- [ ] Create a subfolder always: Manual selection without creating a default folder could cause problems: /Users/christian/Documents/Test Output
 - [x] remove unused dev db location LogosDocuments
 - [x] use consistent default export location for Notes macOS & Windows Documents
 - [ ] do we really want to add tags by default? (Notebook name, etc.)
@@ -203,3 +203,21 @@ Prevents vendor lock-in of data
 - [ ] list of Notes from one Notebook
 - [ ] only minimal metadata
 - [ ] could be added to the index file
+
+### Check Notebooks count
+
+📚 Organizing notes by notebooks...
+Found 60 notebook groups
+
+📊 Statistics:
+  Total Notes: 2009
+  Notes with Content: 373
+  Notes with References: 1699
+  Notebooks: 73
+  Notes with No Notebook: 814
+
+📁 Planning file structure...
+  Directories to create: 61
+  Notes to export: 349
+  Index files to create: 61
+  Estimated size: 759 KB

@@ -26,3 +26,5 @@
 2025-07-23 - fix: UI layout improvements - 32px margins, 1024x700 min window, modern blue theme, simplified output log
 2025-07-23 - fix: UI spacing corrections - exact 32px margins, proper button text sizing, forced blue theme colors with !important CSS overrides
 2025-07-23 - fix: exact 32px bottom spacing, light gray inactive switches/tooltips
+2025-07-24 - fix: comprehensive UI improvements - solid gray tooltips, centered header, left-aligned mode button, one-line database status, grayed database button when connected, dynamic settings status subtitle
+2025-07-24 - fix: remaining UI spacing and output directory issues - corrected bottom spacing to exact 32px, fixed Electron to use absolute output directory path like CLI

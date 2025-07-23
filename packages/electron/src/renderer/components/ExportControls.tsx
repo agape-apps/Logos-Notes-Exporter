@@ -36,16 +36,10 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${selectedDatabasePath ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-          <span className="text-sm font-medium">Database Status</span>
+          <span className="text-sm font-medium">
+            {selectedDatabasePath ? `Connected: ${selectedDatabasePath.split('/').pop()}` : 'Not connected'}
+          </span>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {selectedDatabasePath ? 'Connected' : 'Not connected'}
-        </p>
-        {selectedDatabasePath && (
-          <p className="text-xs text-muted-foreground break-all">
-            {selectedDatabasePath.split('/').pop()}
-          </p>
-        )}
       </div>
 
       {/* Export Progress */}
@@ -82,7 +76,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Convert your Logos notes to Markdown files</TooltipContent>
+          <TooltipContent>Export your Logos notes as Markdown files</TooltipContent>
         </Tooltip>
         
         <Tooltip>
@@ -106,6 +100,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
               variant="secondary"
               className="w-full"
               onClick={onSelectDatabase}
+              disabled={!!selectedDatabasePath}
             >
               <InfoIcon className="h-4 w-4 mr-2" />
               Select Database

@@ -52,7 +52,7 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Advanced Mode Settings</CardTitle>
+              <CardTitle>Export with Advanced Settings</CardTitle>
               <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
                 <DialogTrigger asChild>
                   <Tooltip>
@@ -61,7 +61,7 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                         <HelpCircleIcon className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Show help and documentation</TooltipContent>
+                    <TooltipContent>Show help and documentation (not implemented yet)</TooltipContent>
                   </Tooltip>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -149,7 +149,6 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium">Auto-detect database</label>
-                    <p className="text-xs text-muted-foreground">Automatically find Logos database</p>
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -158,7 +157,7 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                         onCheckedChange={(checked) => onSettingsChange({ autoDetectDatabase: checked })}
                       />
                     </TooltipTrigger>
-                    <TooltipContent>Enable automatic database detection in standard Logos locations</TooltipContent>
+                    <TooltipContent>Automatic database detection in standard Logos locations</TooltipContent>
                   </Tooltip>
                 </div>
 
