@@ -156,13 +156,7 @@ And you will hear of wars and rumors of wars. See that you are not troubled; for
 ## 🗄 Database Locations
 
 - Database is always opened read-only
-- Bible references are always included when available
-
-For Development (use copy of database):
-
-```
-LogosDocuments/NotesToolManager/notestool.db
-```
+- For Development you can use a copy of the databases by copying the Logos directory 
 
 The tool looks for the NotesTool database in these common locations:
 

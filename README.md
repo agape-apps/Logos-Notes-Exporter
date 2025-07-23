@@ -4,7 +4,7 @@ A CLI tool and desktop app that converts Logos Bible Notes to Markdown files wit
 
 ## 🔍 Overview
 
-**Note: this is Beta Software which has only received limited testing.**
+**Note: this is Beta Software which has only received limited testing. Please [report bugs here](https://github.com/agape-apps/Logos-Notes-Exporter/issues)**
 
 This tool extracts notes from Logos Bible Software's NotesTool database and converts them into well-organized Markdown files. It preserves:
 
@@ -36,7 +36,7 @@ This tool extracts notes from Logos Bible Software's NotesTool database and conv
 
 ## 🛠 Installation & Usage
 
-- See detailed instructions in [[README-CLI.md]]
+- See detailed instructions in [README-CLI](README-CLI.md)
 
 ## 🚨 Limitations
 

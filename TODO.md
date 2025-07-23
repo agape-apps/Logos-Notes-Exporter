@@ -1,9 +1,10 @@
 # TODO
 
-## BINARY BUILDS
+## BINARY BUILDS & PUBLISHING
 
-- [ ] Electron: https://www.electronjs.org/docs/latest/tutorial/forge-overview
-- [ ] test creating binary builds
+- [x] Electron package: https://www.electronjs.org/docs/latest/tutorial/forge-overview
+- [ ] Electron publish: https://www.electronjs.org/docs/latest/tutorial/tutorial-publishing-updating
+- [ ] test publishing
 
 ## BUGS & ISSUES
 

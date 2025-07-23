@@ -1,6 +1,6 @@
 ## Development for CLI
 
-*(this needs to be updated)*
+*(this needs to be updated with current scripts)*
 
 ### Prerequisites
 
@@ -84,7 +84,6 @@ scripts/   # create binary release script, triggers Github Action
 packages/  # TypeScript source code files in monorepo for CLI, Electron and Core
 
 Logos-Exported-Notes/  # exported Markdown notes  
-LogosDocuments/        # copy of Logos Databases (optional)
 ```
 
 ## 🏗 Architecture
@@ -117,3 +116,27 @@ The project follows a modular architecture:
 The tool supports Logos Bible reference formats:
 
 - **Anchor format**: `bible+nkjv.61.24.14` → "1 Peter 24:14"
+
+
+## 🗄 Database Locations
+
+- Database is always opened read-only
+- For Development you can use a copy of the databases by copying the Logos directory 
+
+The tool looks for the NotesTool database in these common locations:
+
+### Windows
+
+```
+%LOCALAPPDATA%\Logos4\Documents\<RANDOM_ID>\NotesToolManager\notestool.db
+```
+
+### macOS
+
+```
+~/Library/Application Support/Logos4/Documents/<RANDOM_ID>/NotesToolManager/notestool.db
+```
+
+### Custom Location
+
+Specify with the `--database` option.

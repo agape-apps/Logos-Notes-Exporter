@@ -40,11 +40,7 @@ export class DatabaseLocator {
   public static findDatabases(): DatabaseLocation[] {
     const locations: DatabaseLocation[] = [];
 
-    // 1. Development/Current directory location (current default)
-    const devPath = join('LogosDocuments', this.SUBDIRECTORY, this.DATABASE_FILENAME);
-    locations.push(this.createLocation(devPath, 'development', 'Development location (current working directory)'));
-
-    // 2. Platform-specific standard locations
+    // Platform-specific standard locations
     const platform = process.platform;
     
     if (platform === 'win32') {
@@ -225,7 +221,7 @@ export class DatabaseLocator {
     const locations = this.findDatabases();
     const lines: string[] = [];
 
-    lines.push('🔍 Searching for Logos NotesTool databases...\n');
+    lines.push('🔍 Searching for Logos databases...\n');
 
     if (locations.length === 0) {
       lines.push('❌ No database locations found');
@@ -233,15 +229,27 @@ export class DatabaseLocator {
     }
 
     for (const [index, location] of locations.entries()) {
-      const status = location.exists ? '✅' : '❌';
+      const notestoolStatus = location.exists ? '✅' : '❌';
       const sizeInfo = location.size ? ` (${(location.size / 1024 / 1024).toFixed(1)} MB)` : '';
       const dateInfo = location.lastModified ? ` - ${location.lastModified.toLocaleDateString()}` : '';
       
-      lines.push(`${status} [${index + 1}] ${location.description}`);
-      lines.push(`    ${location.path}${sizeInfo}${dateInfo}`);
+      lines.push(`${notestoolStatus} [${index + 1}] ${location.description}`);
+      lines.push(`    NotesTool: ${location.path}${sizeInfo}${dateInfo}`);
+      
+      // Also show catalog database information
+      const catalogLocation = this.getCatalogLocation(location.path);
+      if (catalogLocation) {
+        const catalogStatus = catalogLocation.exists ? '✅' : '❌';
+        const catalogSizeInfo = catalogLocation.size ? ` (${(catalogLocation.size / 1024 / 1024).toFixed(1)} MB)` : '';
+        const catalogDateInfo = catalogLocation.lastModified ? ` - ${catalogLocation.lastModified.toLocaleDateString()}` : '';
+        
+        lines.push(`    ${catalogStatus} Catalog: ${catalogLocation.path}${catalogSizeInfo}${catalogDateInfo}`);
+      } else {
+        lines.push(`    ❌ Catalog: Could not determine catalog location`);
+      }
       
       if (location.exists && index === 0) {
-        lines.push('    👆 This database will be used by default');
+        lines.push('    👆 These databases will be used by default');
       }
       lines.push('');
     }
