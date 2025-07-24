@@ -42,19 +42,30 @@ const App: React.FC = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
+        console.log('Renderer: Initializing app');
+        
         // Load settings from main process
         const savedData = await window.electronAPI.loadSettings();
         if (savedData) {
+          console.log('Renderer: Loaded settings from main process');
           setSettings(savedData.settings);
           // Restore the saved app mode
           setMode(savedData.mode as AppMode);
+          
+          // If we have a database path in saved settings, set it immediately
+          if (savedData.settings.databasePath) {
+            console.log('Renderer: Restoring database path from settings:', savedData.settings.databasePath);
+            setSelectedDatabasePath(savedData.settings.databasePath);
+            // Don't add output log message here - let auto-detection or sync handle it
+          }
         }
 
         // Database detection is handled by main process on startup
         // The database-detected IPC event will set the selectedDatabasePath
         setIsInitialized(true);
+        console.log('Renderer: App initialization completed');
       } catch (error) {
-        console.error('Failed to initialize app:', error);
+        console.error('Renderer: Failed to initialize app:', error);
         addLogMessage('❌ Failed to initialize app');
         setIsInitialized(true);
       }
@@ -64,6 +75,54 @@ const App: React.FC = () => {
     // Zustand store actions are stable references and don't need to be in dependencies
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Hot reload recovery: Re-sync database state when main process restarts
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    // If we have a database path but main process doesn't know about it (after hot reload),
+    // we need to re-notify the main process
+    const handleHotReloadRecovery = () => {
+      if (selectedDatabasePath) {
+        console.log('Renderer: Hot reload detected - re-syncing database state');
+        console.log('Renderer: Re-sending database path to main process:', selectedDatabasePath);
+        
+        // Use the new sync method to explicitly sync database state with main process
+        window.electronAPI.syncDatabaseState(selectedDatabasePath).then((result) => {
+          if (result.success) {
+            console.log('Renderer: Database state synchronized successfully');
+            // Don't add redundant output log message - IPC handler will handle it
+          } else {
+            console.log('Renderer: Database synchronization failed:', result.error);
+            addLogMessage(`⚠️ Database sync failed: ${result.error}`);
+            
+            // Try auto-detection as fallback
+            window.electronAPI.detectDatabase().catch((error) => {
+              console.error('Renderer: Fallback detection also failed:', error);
+            });
+          }
+        }).catch((error) => {
+          console.error('Renderer: Failed to sync database state:', error);
+          addLogMessage(`❌ Database sync error: ${error.message || error}`);
+          
+          // Try auto-detection as fallback
+          window.electronAPI.detectDatabase().catch((fallbackError) => {
+            console.error('Renderer: Fallback detection also failed:', fallbackError);
+          });
+        });
+      } else {
+        console.log('Renderer: No database path to sync, triggering auto-detection');
+        // If we don't have a database path, trigger auto-detection
+        window.electronAPI.detectDatabase().catch((error) => {
+          console.error('Renderer: Auto-detection failed:', error);
+        });
+      }
+    };
+
+    // Delay slightly to allow main process to fully initialize
+    const syncTimeout = setTimeout(handleHotReloadRecovery, 2000);
+    return () => clearTimeout(syncTimeout);
+  }, [isInitialized, selectedDatabasePath, addLogMessage]);
 
   // Auto-save settings when they change
   useEffect(() => {

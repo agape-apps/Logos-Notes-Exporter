@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Database operations
   detectDatabase: () => ipcRenderer.invoke('detect-database'),
+  syncDatabaseState: (databasePath: string) => ipcRenderer.invoke('sync-database-state', databasePath),
   
   // Event listeners for main → renderer communication
   onExportProgress: (callback: MainToRenderer['export-progress']) => {
@@ -74,6 +75,7 @@ declare global {
       
       // Database operations
       detectDatabase: () => Promise<string | null>;
+      syncDatabaseState: (databasePath: string) => Promise<{ success: boolean; path?: string; error?: string }>;
       
       // Event listeners
       onExportProgress: (callback: MainToRenderer['export-progress']) => () => void;

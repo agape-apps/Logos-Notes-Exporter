@@ -429,7 +429,7 @@ export class LogosNotesExporter {
       this.log(`  Images found: ${stats.imagesFound}`);
       this.log(`  Images downloaded: ${stats.imagesDownloaded}`);
       this.log(`  Download failures: ${stats.imageDownloadsFailed}`);
-      this.log(`  Total image size: ${stats.totalImageSizeMB.toFixed(2)} MB`);
+      this.log(`  Images downloaded size: ${stats.totalImageSizeMB.toFixed(2)} MB`);
       
       if (stats.imageDownloadsFailed > 0) {
         this.log(`\n⚠️  Image Download Issues: ${stats.imageDownloadsFailed} out of ${stats.imagesFound} images failed to download`);

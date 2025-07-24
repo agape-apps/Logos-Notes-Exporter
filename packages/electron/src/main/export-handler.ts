@@ -91,6 +91,8 @@ export async function executeExport(
   settings: ExportSettings,
   mainWindow: BrowserWindow | null
 ): Promise<ExportResult> {
+  console.log('Export handler: Starting export');
+  
   // Add debugging to see what we're receiving
   console.log('Export settings received:', {
     databasePath: settings.databasePath,
@@ -108,7 +110,11 @@ export async function executeExport(
       if (mainWindow) {
         mainWindow.webContents.send('output-log', `🔍 Auto-detected database: ${finalDatabasePath}`);
       }
+    } else {
+      console.log('Auto-detection failed - no database found');
     }
+  } else {
+    console.log('Using provided database path:', finalDatabasePath);
   }
 
   // Update settings with the final database path
@@ -117,11 +123,19 @@ export async function executeExport(
     databasePath: finalDatabasePath
   };
 
+  console.log('Final settings for validation:', {
+    databasePath: updatedSettings.databasePath,
+    outputDirectory: updatedSettings.outputDirectory
+  });
+
   // Validate settings
+  console.log('Validating export settings...');
   const validation = validateExportSettings(updatedSettings);
   if (!validation.valid) {
+    console.error('Validation failed:', validation.error);
     throw new Error(validation.error);
   }
+  console.log('Settings validation passed');
 
   // Convert Electron ExportSettings to Core ExportOptions
   const coreOptions: CoreExportOptions = {
@@ -143,9 +157,10 @@ export async function executeExport(
     dryRun: updatedSettings.dryRun,
   };
 
-  console.log('Core options being passed:', {
+  console.log('Core options prepared:', {
     database: coreOptions.database,
-    output: coreOptions.output
+    output: coreOptions.output,
+    dryRun: coreOptions.dryRun
   });
 
   // Create callbacks for Electron IPC communication
@@ -163,13 +178,23 @@ export async function executeExport(
   };
 
   // Create and run the core exporter
-  const exporter = new LogosNotesExporter(coreOptions, callbacks);
-  const result = await exporter.export();
+  console.log('Creating LogosNotesExporter instance...');
+  try {
+    const exporter = new LogosNotesExporter(coreOptions, callbacks);
+    console.log('LogosNotesExporter created successfully');
+    
+    console.log('Starting export process...');
+    const result = await exporter.export();
+    console.log('Export completed successfully:', result);
 
-  // Convert core result to Electron result format
-  return {
-    success: result.success,
-    outputPath: result.outputPath,
-    error: result.error
-  };
+    // Convert core result to Electron result format
+    return {
+      success: result.success,
+      outputPath: result.outputPath,
+      error: result.error
+    };
+  } catch (error) {
+    console.error('Core exporter error:', error);
+    throw error;
+  }
 } 
