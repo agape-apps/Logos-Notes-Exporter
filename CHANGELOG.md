@@ -31,3 +31,4 @@
 2025-07-24 - fix: database connection lost during Electron hot reload - added automatic database state synchronization after main process restart
 2025-07-24 fix: improved console logging and environment detection to eliminate misleading browser warnings in Electron renderer context
 2025-07-24 fix: simplified environment detection in config module to prevent misleading browser warnings in Electron renderer context
+2025-07-24 feat: enhanced notebook index files - renamed README.md to INDEX.md with inline note content, alphabetical sorting, and highlights support

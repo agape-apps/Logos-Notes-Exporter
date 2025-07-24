@@ -24,6 +24,13 @@
       - add a tag or note?
 - [x] Markdown: is it ok for list items to have a double space at the line ending? YES, OK
 
+## DO NOT FIX
+
+Fix was attempted, but failed. Not necessary and not worth fixing.
+- Electron Console Log: Function components cannot be given refs. Attempts to access this ref will fail. (This warning does not show up once the app is packaged.)
+- Electron Security Warning (Insecure Content-Security-Policy (This warning will not show up
+once the app is packaged.)
+
 ### Issues to check 
 
 - [x] Multiple Anchors work. First anchor is used for main reference and filename

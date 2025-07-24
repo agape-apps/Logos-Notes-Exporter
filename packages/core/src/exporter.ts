@@ -240,13 +240,14 @@ export class LogosNotesExporter {
 
         // Create notebook index
         if (this.fileOrganizer.getOptions().createIndexFiles) {
-          const indexContent = this.fileOrganizer.generateNotebookIndex(group);
-          const indexPath = join(this.fileOrganizer.getNotebookDirectory(group), 'README.md');
-          await this.fileOrganizer.ensureDirectory(this.fileOrganizer.getNotebookDirectory(group));
+          const notebookDir = this.fileOrganizer.getNotebookDirectory(group);
+          const indexContent = await this.fileOrganizer.generateNotebookIndex(group, notebookDir);
+          const indexPath = join(notebookDir, 'INDEX.md');
+          await this.fileOrganizer.ensureDirectory(notebookDir);
           await this.fileOrganizer.writeFile({
             fullPath: indexPath,
-            directory: this.fileOrganizer.getNotebookDirectory(group),
-            filename: 'README',
+            directory: notebookDir,
+            filename: 'INDEX',
             relativePath: indexPath.replace(this.fileOrganizer.getOptions().baseDir + '/', ''),
             exists: false
           }, indexContent);

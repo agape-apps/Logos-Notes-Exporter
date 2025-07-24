@@ -1,7 +1,8 @@
 # Project-Specific Data and Output
 data/debug/
 LogosDocuments*/
-Logos-Exported-Notes/
+Logos-Exported-Notes*/
+logos-notes-export*/
 screenshots/
 
 # Monorepo Build Artifacts

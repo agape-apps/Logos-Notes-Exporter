@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
@@ -63,29 +63,34 @@ export class FileOrganizer {
   private bibleDecoder = new BibleReferenceDecoder();
   private resourceIdMap?: Map<number, ResourceId>;
 
-  constructor(options: Partial<FileStructureOptions> = {}, resourceIds?: ResourceId[]) {
+  constructor(
+    options: Partial<FileStructureOptions> = {},
+    resourceIds?: ResourceId[]
+  ) {
     this.options = { ...DEFAULT_FILE_OPTIONS, ...options };
-    
+
     // Create resourceId lookup map if provided
     if (resourceIds) {
-      this.resourceIdMap = new Map(resourceIds.map(r => [r.resourceIdId, r]));
+      this.resourceIdMap = new Map(resourceIds.map((r) => [r.resourceIdId, r]));
     }
   }
 
   /**
    * Plan the directory structure for notebook groups
    */
-  public async planDirectoryStructure(notebookGroups: NotebookGroup[]): Promise<DirectoryStructure> {
+  public async planDirectoryStructure(
+    notebookGroups: NotebookGroup[]
+  ): Promise<DirectoryStructure> {
     const structure: DirectoryStructure = {
       baseDir: this.options.baseDir,
       notebookDirs: [],
       totalFiles: 0,
-      indexFiles: []
+      indexFiles: [],
     };
 
     // Plan main index
     if (this.options.createIndexFiles) {
-      structure.indexFiles.push(join(this.options.baseDir, 'README.md'));
+      structure.indexFiles.push(join(this.options.baseDir, "README.md"));
     }
 
     // Plan notebook directories and files
@@ -96,7 +101,7 @@ export class FileOrganizer {
 
       // Plan notebook index
       if (this.options.createIndexFiles) {
-        structure.indexFiles.push(join(notebookDir, 'README.md'));
+        structure.indexFiles.push(join(notebookDir, "INDEX.md"));
       }
     }
 
@@ -118,30 +123,34 @@ export class FileOrganizer {
   /**
    * Generate file path information for a note
    */
-  public generateFilePath(note: OrganizedNote, group: NotebookGroup, index: number = 1): FilePathInfo {
+  public generateFilePath(
+    note: OrganizedNote,
+    group: NotebookGroup,
+    index: number = 1
+  ): FilePathInfo {
     const directory = this.getNotebookDirectory(group);
-    
+
     // Generate base filename
     let filename = this.generateSafeFilename(note, index);
-    
+
     // Add date folder if enabled
     let finalDirectory = directory;
     if (this.options.includeDateFolders) {
       const date = new Date(note.createdDate);
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, "0");
       finalDirectory = join(directory, `${year}-${month}`);
     }
 
     const fullPath = join(finalDirectory, filename);
-    const relativePath = fullPath.replace(this.options.baseDir + '/', '');
+    const relativePath = fullPath.replace(this.options.baseDir + "/", "");
 
     return {
       fullPath,
       directory: finalDirectory,
-      filename: filename.replace(this.options.fileExtension, ''),
+      filename: filename.replace(this.options.fileExtension, ""),
       relativePath,
-      exists: existsSync(fullPath)
+      exists: existsSync(fullPath),
     };
   }
 
@@ -158,113 +167,260 @@ export class FileOrganizer {
   /**
    * Write file with content
    */
-  public async writeFile(fileInfo: FilePathInfo, content: string): Promise<void> {
+  public async writeFile(
+    fileInfo: FilePathInfo,
+    content: string
+  ): Promise<void> {
     await this.ensureDirectory(fileInfo.directory);
-    await writeFile(fileInfo.fullPath, content, 'utf-8');
+    await writeFile(fileInfo.fullPath, content, "utf-8");
   }
 
   /**
    * Generate a main README.md file
    */
-  public generateMainIndex(notebookGroups: NotebookGroup[], stats: OrganizationStats): string {
+  public generateMainIndex(
+    notebookGroups: NotebookGroup[],
+    stats: OrganizationStats
+  ): string {
     const lines = [
-      '# Exported Logos Notes',
-      '',
+      "# Exported Logos Notes",
+      "",
       `**Exported on:** ${new Date().toISOString()}  `,
       `**Total Notes:** ${stats.totalNotes}  `,
       `**Total Notebooks:** ${notebookGroups.length}  `,
-      '',
-      '## 📚 Notebooks',
-      ''
+      "",
+      "## 📚 Notebooks",
+      "",
     ];
 
     // Add notebook links
     for (const group of notebookGroups) {
-      const notebookName = group.notebook?.title || 'No Notebook';
+      const notebookName = group.notebook?.title || "No Notebook";
       const noteCount = group.notes.length;
       const relativePath = group.sanitizedFolderName;
-      
-      lines.push(`- [**${notebookName}**](./${relativePath}/README.md) (${noteCount} notes)`);
+
+      lines.push(
+        `- [**${notebookName}**](./${relativePath}/INDEX.md) (${noteCount} notes)`
+      );
     }
 
-    lines.push('');
-    lines.push('## 📊 Statistics');
-    lines.push('');
+    lines.push("");
+    lines.push("## 📊 Statistics");
+    lines.push("");
     lines.push(`- **Notes with Content:** ${stats.notesWithContent}`);
     lines.push(`- **Notes with References:** ${stats.notesWithReferences}`);
     lines.push(`- **No Notebook:** ${stats.orphanedNotes}`);
-    lines.push('');
-    lines.push('---');
-    lines.push('*Generated by Logos Notes Exporter*');
+    lines.push("");
+    lines.push("---");
+    lines.push("*Generated by Logos Notes Exporter*");
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
-   * Generate a notebook README.md file
+   * Generate a notebook INDEX.md file
    */
-  public generateNotebookIndex(group: NotebookGroup): string {
-    const notebookTitle = group.notebook?.title || 'No Notebook';
-    const lines = [
-      `# ${notebookTitle}`,
-      '',
-      `**Notes:** ${group.notes.length}  `,
-      ''
-    ];
-
-    if (group.notebook) {
-      lines.push(`**Created:** ${new Date(group.notebook.createdDate).toLocaleDateString()}  `);
-      lines.push('');
-    }
-
-    lines.push('## 📝 Notes');
-    lines.push('');
+  public async generateNotebookIndex(
+    group: NotebookGroup,
+    notebookDir?: string
+  ): Promise<string> {
+    const notebookTitle = group.notebook?.title || "No Notebook";
+    const lines = [`# ${notebookTitle}`, ""];
 
     // Group notes by type
-    const textNotes = group.notes.filter(n => n.kind === 0);
-    const highlights = group.notes.filter(n => n.kind === 1);
-    const annotations = group.notes.filter(n => n.kind === 2);
+    const textNotes = group.notes.filter((n) => n.kind === 0);
+    const highlights = group.notes.filter((n) => n.kind === 1);
+    const annotations = group.notes.filter((n) => n.kind === 2);
 
+    // Sort notes alphabetically by filename
+    const sortByFilename = (a: OrganizedNote, b: OrganizedNote) => {
+      const filenameA = this.generateSafeFilename(a, 1);
+      const filenameB = this.generateSafeFilename(b, 1);
+      return filenameA.localeCompare(filenameB);
+    };
+
+    lines.push("## 📝 Notes");
+    lines.push("");
+
+    // Add Text Notes links section
     if (textNotes.length > 0) {
-      lines.push('### ✍️ Text Notes');
-      lines.push('');
-      textNotes.forEach(note => {
+      lines.push("### ✍️ Text Notes");
+      lines.push("");
+      const sortedTextNotes = textNotes.sort(sortByFilename);
+      sortedTextNotes.forEach((note) => {
         const filename = this.generateSafeFilename(note, 1);
         const title = note.formattedTitle;
-        const references = note.references.map(r => r.formatted).join(', ');
-        lines.push(`- [**${title}**](./${filename})${references ? ` - ${references}` : ''}`);
+        const references = note.references.map((r) => r.formatted).join(", ");
+        lines.push(
+          `- [**${title}**](./${filename})${
+            references ? ` - ${references}` : ""
+          }`
+        );
       });
-      lines.push('');
+      lines.push("");
+    }
+
+    // Add Highlights links section
+    if (highlights.length > 0) {
+      lines.push("### 🎨 Highlights");
+      lines.push("");
+      const sortedHighlights = highlights.sort(sortByFilename);
+      sortedHighlights.forEach((note) => {
+        const filename = this.generateSafeFilename(note, 1);
+        const title = note.formattedTitle;
+        const references = note.references.map((r) => r.formatted).join(", ");
+        lines.push(
+          `- [**${title}**](./${filename})${
+            references ? ` - ${references}` : ""
+          }`
+        );
+      });
+      lines.push("");
+    }
+
+    // Add Annotations links section if any
+    if (annotations.length > 0) {
+      lines.push("### 📋 Annotations");
+      lines.push("");
+      const sortedAnnotations = annotations.sort(sortByFilename);
+      sortedAnnotations.forEach((note) => {
+        const filename = this.generateSafeFilename(note, 1);
+        const title = note.formattedTitle;
+        const references = note.references.map((r) => r.formatted).join(", ");
+        lines.push(
+          `- [**${title}**](./${filename})${
+            references ? ` - ${references}` : ""
+          }`
+        );
+      });
+      lines.push("");
+    }
+
+    // Add notes count and created date
+    lines.push(
+      `**Notes:** ${group.notes.length}  **Created:** ${
+        group.notebook
+          ? new Date(group.notebook.createdDate).toLocaleDateString()
+          : "Unknown"
+      }  `
+    );
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+
+    // Add inline content sections
+    if (textNotes.length > 0) {
+      lines.push("## ✍️ Text Notes");
+      lines.push("");
+
+      // Sort and process text notes
+      const sortedTextNotes = textNotes.sort(sortByFilename);
+      for (const note of sortedTextNotes) {
+        await this.addNoteContentToIndex(lines, note, notebookDir || "");
+      }
+
+      lines.push("---");
+      lines.push("");
     }
 
     if (highlights.length > 0) {
-      lines.push('### 🎨 Highlights');
-      lines.push('');
-      highlights.forEach(note => {
-        const filename = this.generateSafeFilename(note, 1);
-        const title = note.formattedTitle;
-        const references = note.references.map(r => r.formatted).join(', ');
-        lines.push(`- [**${title}**](./${filename})${references ? ` - ${references}` : ''}`);
-      });
-      lines.push('');
+      lines.push("## 🎨 Highlights");
+      lines.push("");
+
+      // Sort and process highlights
+      const sortedHighlights = highlights.sort(sortByFilename);
+      for (const note of sortedHighlights) {
+        await this.addNoteContentToIndex(lines, note, notebookDir || "");
+      }
+
+      lines.push("---");
+      lines.push("");
     }
 
-    if (annotations.length > 0) {
-      lines.push('### 📋 Annotations');
-      lines.push('');
-      annotations.forEach(note => {
-        const filename = this.generateSafeFilename(note, 1);
-        const title = note.formattedTitle;
-        const references = note.references.map(r => r.formatted).join(', ');
-        lines.push(`- [**${title}**](./${filename})${references ? ` - ${references}` : ''}`);
-      });
-      lines.push('');
+    // Remove the last extra divider and empty line if present
+    if (lines[lines.length - 1] === "" && lines[lines.length - 2] === "---") {
+      lines.pop();
     }
 
-    lines.push('---');
-    lines.push(`*${group.notes.length} notes in this notebook*`);
+    return lines.join("\n");
+  }
 
-    return lines.join('\n');
+  /**
+   * Add note content inline to the index
+   */
+  private async addNoteContentToIndex(
+    lines: string[],
+    note: OrganizedNote,
+    notebookDir: string
+  ): Promise<void> {
+    // Extract title and bible version from note
+    const title = note.formattedTitle;
+    const bibleVersion = this.extractBibleVersion(note);
+
+    // Add note heading
+    lines.push(`### ${title}${bibleVersion ? ` (${bibleVersion})` : ""}`);
+    lines.push("");
+
+    // Add note content from the markdown file
+    const content = await this.extractNoteContent(note, notebookDir);
+    if (content) {
+      lines.push(content);
+    } else {
+      lines.push("*No content available*");
+    }
+
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+  }
+
+  /**
+   * Extract bible version from note references
+   */
+  private extractBibleVersion(note: OrganizedNote): string | null {
+    if (note.references.length > 0) {
+      // For now, default to NKJV - this could be enhanced to extract from the original reference
+      return "NKJV";
+    }
+    return null;
+  }
+
+  /**
+   * Extract note content by reading the generated markdown file
+   */
+  // TODO: this is quite a hack. Instead the generated note content should be
+  // copied into each note file and the Notebook index file in the same loop.
+  private async extractNoteContent(
+    note: OrganizedNote,
+    notebookDir: string
+  ): Promise<string | null> {
+    try {
+      const filename = this.generateSafeFilename(note, 1);
+      const filePath = join(notebookDir, filename);
+
+      if (existsSync(filePath)) {
+        const content = await readFile(filePath, "utf-8");
+
+        // Extract content after the front matter
+        const frontMatterEnd = content.indexOf("---", 4); // Find second occurrence of ---
+        if (frontMatterEnd !== -1) {
+          const markdownContent = content.substring(frontMatterEnd + 4).trim();
+          return markdownContent || null;
+        }
+      }
+
+      // Fallback to content from note data if file doesn't exist
+      if (note.contentRichText) {
+        const content = note.contentRichText
+          .replace(/<[^>]*>/g, "") // Remove XML tags
+          .trim();
+        return content ? `*${content}*` : null;
+      }
+    } catch (error) {
+      console.warn(`Failed to read content for note ${note.id}:`, error);
+    }
+
+    return null;
   }
 
   /**
@@ -274,28 +430,31 @@ export class FileOrganizer {
     // Check if this is a Bible reference note
     if (note.references.length > 0 && note.references[0]) {
       const firstRef = note.references[0];
-      
+
       // Try to generate Bible filename format for Bible references
       if (firstRef.anchorBookId && firstRef.chapter) {
         try {
           let filename = this.bibleDecoder.generateBibleFilename(
-            firstRef.anchorBookId, 
-            firstRef.chapter, 
+            firstRef.anchorBookId,
+            firstRef.chapter,
             firstRef.verse,
             firstRef.endChapter,
             firstRef.endVerse
           );
-          
+
           // Add index if greater than 1
           if (index > 1) {
             // Insert index before .md extension
-            filename = filename.replace('.md', `(${index}).md`);
+            filename = filename.replace(".md", `(${index}).md`);
           }
-          
+
           return filename;
         } catch (error) {
           // Fall back to regular filename if Bible format fails
-          console.warn(`Failed to generate Bible filename for note ${note.id}:`, error);
+          console.warn(
+            `Failed to generate Bible filename for note ${note.id}:`,
+            error
+          );
         }
       }
     }
@@ -305,31 +464,47 @@ export class FileOrganizer {
       try {
         // We need to access the database to get the actual resourceId string
         // For now, we'll use a placeholder and implement this properly
-        const resourceIdString = this.getResourceIdString(note.anchorResourceIdId);
-        
+        const resourceIdString = this.getResourceIdString(
+          note.anchorResourceIdId
+        );
+
         if (resourceIdString) {
-          const filename = this.generateResourceIdFilename(resourceIdString, note.id, index);
+          const filename = this.generateResourceIdFilename(
+            resourceIdString,
+            note.id,
+            index
+          );
           return filename;
         }
       } catch (error) {
-        console.warn(`Failed to generate resourceId filename for note ${note.id}:`, error);
+        console.warn(
+          `Failed to generate resourceId filename for note ${note.id}:`,
+          error
+        );
       }
     }
 
     // Fallback to traditional filename generation
-    let filename = '';
+    let filename = "";
 
     // Check if formattedTitle is just a generic "Note XXX" pattern
-    const isGenericNoteTitle = note.formattedTitle && /^(Note|Highlight|Annotation)\s+\d+$/.test(note.formattedTitle.trim());
+    const isGenericNoteTitle =
+      note.formattedTitle &&
+      /^(Note|Highlight|Annotation)\s+\d+$/.test(note.formattedTitle.trim());
 
     // Use formatted title or generate from references
-    if (note.formattedTitle && note.formattedTitle.trim() && !isGenericNoteTitle) {
+    if (
+      note.formattedTitle &&
+      note.formattedTitle.trim() &&
+      !isGenericNoteTitle
+    ) {
       filename = note.formattedTitle;
     } else if (note.references.length > 0 && note.references[0]) {
       filename = note.references[0].formatted;
     } else {
-      const noteType = note.kind === 0 ? 'Note' : note.kind === 1 ? 'Highlight' : 'Annotation';
-      const paddedNoteId = note.id.toString().padStart(4, '0');
+      const noteType =
+        note.kind === 0 ? "Note" : note.kind === 1 ? "Highlight" : "Annotation";
+      const paddedNoteId = note.id.toString().padStart(4, "0");
       filename = `${noteType}-${paddedNoteId}`;
     }
 
@@ -340,7 +515,7 @@ export class FileOrganizer {
 
     // Sanitize filename
     filename = this.sanitizeFilename(filename);
-    
+
     // Add extension
     return filename + this.options.fileExtension;
   }
@@ -350,8 +525,12 @@ export class FileOrganizer {
    * Pattern: resourceIdPart1-resourceIdPart2-noteId
    * For UUIDs in PBB resources, use only last 4 characters
    */
-  private generateResourceIdFilename(resourceIdString: string, noteId: number, index: number): string {
-    const parts = resourceIdString.split(':');
+  private generateResourceIdFilename(
+    resourceIdString: string,
+    noteId: number,
+    index: number
+  ): string {
+    const parts = resourceIdString.split(":");
     if (parts.length !== 2 || !parts[1]) {
       throw new Error(`Invalid resourceId format: ${resourceIdString}`);
     }
@@ -367,7 +546,7 @@ export class FileOrganizer {
     }
 
     // Build filename with 4-digit padded noteId
-    const paddedNoteId = noteId.toString().padStart(4, '0');
+    const paddedNoteId = noteId.toString().padStart(4, "0");
     let filename = `${part1}-${processedPart2}-${paddedNoteId}`;
 
     // Add index if greater than 1
@@ -385,7 +564,7 @@ export class FileOrganizer {
     if (!this.resourceIdMap) {
       return null;
     }
-    
+
     const resourceId = this.resourceIdMap.get(resourceIdId);
     return resourceId ? resourceId.resourceId : null;
   }
@@ -394,26 +573,31 @@ export class FileOrganizer {
    * Sanitize filename for filesystem
    */
   private sanitizeFilename(name: string): string {
-    return name
-      .replace(/[<>:"/\\\\|?*]/g, '-') // Replace invalid characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Collapse multiple hyphens
-      .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
-      .substring(0, this.options.maxFilenameLength) // Limit length
-      || 'untitled';
+    return (
+      name
+        .replace(/[<>:"/\\\\|?*]/g, "-") // Replace invalid characters
+        .replace(/\s+/g, "-") // Replace spaces with hyphens
+        .replace(/-+/g, "-") // Collapse multiple hyphens
+        .replace(/^-|-$/g, "") // Remove leading/trailing hyphens
+        .substring(0, this.options.maxFilenameLength) || // Limit length
+      "untitled"
+    );
   }
 
   /**
    * Check for filename conflicts and resolve them
    */
-  public resolveFilenameConflicts(notes: OrganizedNote[], group: NotebookGroup): Map<OrganizedNote, FilePathInfo> {
+  public resolveFilenameConflicts(
+    notes: OrganizedNote[],
+    group: NotebookGroup
+  ): Map<OrganizedNote, FilePathInfo> {
     const fileMap = new Map<OrganizedNote, FilePathInfo>();
     const usedFilenames = new Set<string>();
 
     for (const note of notes) {
       let index = 1;
       let fileInfo: FilePathInfo;
-      
+
       do {
         fileInfo = this.generateFilePath(note, group, index);
         index++;
@@ -450,7 +634,7 @@ export class FileOrganizer {
         totalDirectories++; // Notebook directory
       }
       totalFiles += group.notes.length;
-      
+
       // Only count notebook indexes if organizing by notebooks
       if (this.options.createIndexFiles && this.options.organizeByNotebooks) {
         totalIndexFiles++;
@@ -459,9 +643,11 @@ export class FileOrganizer {
       // Add date directories if enabled
       if (this.options.includeDateFolders) {
         const uniqueDates = new Set(
-          group.notes.map(note => {
+          group.notes.map((note) => {
             const date = new Date(note.createdDate);
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            return `${date.getFullYear()}-${String(
+              date.getMonth() + 1
+            ).padStart(2, "0")}`;
           })
         );
         totalDirectories += uniqueDates.size;
@@ -471,14 +657,15 @@ export class FileOrganizer {
     // Rough size estimation (very approximate)
     const avgNoteSize = 2048; // 2KB average
     const avgIndexSize = 1024; // 1KB average
-    const estimatedBytes = (totalFiles * avgNoteSize) + (totalIndexFiles * avgIndexSize);
+    const estimatedBytes =
+      totalFiles * avgNoteSize + totalIndexFiles * avgIndexSize;
     const estimatedSize = this.formatBytes(estimatedBytes);
 
     return {
       totalDirectories,
       totalFiles,
       totalIndexFiles,
-      estimatedSize
+      estimatedSize,
     };
   }
 
@@ -486,11 +673,11 @@ export class FileOrganizer {
    * Format bytes into human-readable string
    */
   private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
   /**

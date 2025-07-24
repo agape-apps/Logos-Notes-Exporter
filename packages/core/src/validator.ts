@@ -150,7 +150,7 @@ export class ExportValidator {
       }
 
       // Check notebook README
-      const notebookReadme = join(notebookDir, 'README.md');
+      const notebookReadme = join(notebookDir, 'INDEX.md');
       if (!existsSync(notebookReadme)) {
         issues.push({
           severity: 'warning',
@@ -171,7 +171,7 @@ export class ExportValidator {
   private async validateNoteCount(exportDir: string, originalNotes: OrganizedNote[], issues: ValidationIssue[], stats: ValidationStats): Promise<void> {
     const markdownFiles = this.findMarkdownFiles(exportDir);
     const expectedCount = originalNotes.length;
-    const actualCount = markdownFiles.filter(f => !f.endsWith('README.md')).length;
+    const actualCount = markdownFiles.filter(f => !f.endsWith('README.md') && !f.endsWith('INDEX.md')).length;
 
     if (actualCount !== expectedCount) {
       issues.push({
@@ -197,7 +197,7 @@ export class ExportValidator {
    * Validate content quality
    */
   private async validateContent(exportDir: string, originalNotes: OrganizedNote[], issues: ValidationIssue[], stats: ValidationStats): Promise<void> {
-    const markdownFiles = this.findMarkdownFiles(exportDir).filter(f => !f.endsWith('README.md'));
+    const markdownFiles = this.findMarkdownFiles(exportDir).filter(f => !f.endsWith('README.md') && !f.endsWith('INDEX.md'));
     const sampleFiles = this.options.sampleSize > 0 
       ? markdownFiles.slice(0, this.options.sampleSize)
       : markdownFiles;
