@@ -52,6 +52,7 @@ export function setupIpcHandlers(): void {
       const mainWindow = BrowserWindow.getFocusedWindow();
       if (mainWindow) {
         const loadedData = loadSettings();
+        console.log('✅ Settings restored to defaults, output directory (in ipc-handlers):', loadedData.settings.outputDirectory);
         mainWindow.webContents.send('settings-loaded', loadedData.settings);
       }
     } catch (error) {

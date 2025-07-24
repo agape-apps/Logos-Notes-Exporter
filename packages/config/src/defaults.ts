@@ -10,28 +10,34 @@ declare const require: any;
 
 /**
  * Get the default output directory path cross-platform
- * Returns user's Documents/Logos-Exported-Notes on both macOS and Windows
- * In browser environments, returns a fallback path
+ * Returns user's Documents/Logos-Exported-Notes in Node.js environments (CLI, Electron main)
+ * Returns fallback path in other contexts (Electron renderer with context isolation)
  */
 function getDefaultOutputDirectory(): string {
-  // Check if we're in a Node.js environment with require available
-  if (typeof require !== 'undefined' && typeof process !== 'undefined' && process.versions) {
+  // Simple and reliable Node.js environment detection
+  const hasNodeJSAccess = typeof require !== 'undefined' && 
+                          typeof process !== 'undefined' && 
+                          process.versions && 
+                          process.versions.node;
+  
+  if (hasNodeJSAccess) {
     try {
       const os = require('os');
       const path = require('path');
-      return path.join(os.homedir(), 'Documents', 'Logos-Exported-Notes');
+      const fullPath = path.join(os.homedir(), 'Documents', 'Logos-Exported-Notes');
+      console.log('📁 Using default output directory:', fullPath);
+      return fullPath;
     } catch (error) {
-      // Fallback if Node.js modules are not available
-      console.warn('⚠️  Failed to access Node.js modules for cross-platform path detection. Using fallback path.');
+      console.warn('⚠️  Failed to access Node.js modules. Using fallback path.');
       console.warn(`   Error: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
-    // Browser environment detected
-    console.warn('⚠️  Browser environment detected. Using relative fallback path instead of user Documents folder.');
+    // Context without Node.js access (e.g., Electron renderer with context isolation)
+    console.log('📁 Using temporary default path (will be overridden by proper settings)');
   }
   
-  // Fallback for browser environments or when Node.js modules fail
-  console.log('📁 Using fallback output directory: ./Logos-Exported-Notes');
+  // Fallback path
+  console.log('📁 Temporary default output directory: ./Logos-Exported-Notes');
   return './Logos-Exported-Notes';
 }
 

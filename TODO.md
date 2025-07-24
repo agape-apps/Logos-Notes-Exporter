@@ -14,7 +14,7 @@
 - [ ] do we really want to add tags by default? (Notebook name, etc.)
 - [x] Output Log cleanup duplication: 🚀 Starting export... 🚀 Starting export... Starting Logos Notes export...
 - [ ] Consider changing LogosNotesExporter CLI command to Logos-Notes-Exporter for consistency (optional)
-- [ ] During development and app use (manual refresh), if Electron reloads, the db connection is lost (was ok before)
+- [x] During development and app use (manual refresh), if Electron reloads, the db connection is lost
 
 - [x] when exporting notes after the first start the screen refreshes and the log disappears
 - [ ] check src/xaml-converter.ts, possibly too many blank lines in some cases, but mostly looking good

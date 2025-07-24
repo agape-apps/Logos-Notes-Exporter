@@ -54,6 +54,7 @@ const createWindow = (): void => {
       mainWindow.show();
       
       // Send initial settings to renderer
+      console.log('✅ Initial settings loaded, output directory (in main):', settings.outputDirectory);
       mainWindow.webContents.send('settings-loaded', settings);
       mainWindow.webContents.send('output-log', '🚀 Logos Notes Exporter ready!');
       

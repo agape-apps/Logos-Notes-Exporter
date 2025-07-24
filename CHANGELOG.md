@@ -29,3 +29,5 @@
 2025-07-24 - fix: comprehensive UI improvements - solid gray tooltips, centered header, left-aligned mode button, one-line database status, grayed database button when connected, dynamic settings status subtitle
 2025-07-24 - fix: remaining UI spacing and output directory issues - corrected bottom spacing to exact 32px, fixed Electron to use absolute output directory path like CLI
 2025-07-24 - fix: database connection lost during Electron hot reload - added automatic database state synchronization after main process restart
+2025-07-24 fix: improved console logging and environment detection to eliminate misleading browser warnings in Electron renderer context
+2025-07-24 fix: simplified environment detection in config module to prevent misleading browser warnings in Electron renderer context

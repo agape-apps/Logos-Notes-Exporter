@@ -245,6 +245,7 @@ const App: React.FC = () => {
       }),
       
       window.electronAPI.onSettingsLoaded((loadedSettings) => {
+        console.log('✅ Renderer: Received correct settings from main process, output directory:', loadedSettings.outputDirectory);
         setSettings(loadedSettings);
       }),
       
