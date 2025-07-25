@@ -80,25 +80,22 @@ once the app is packaged.)
 
 ## XAML CONVERSION 
 
+- [ ] Test with copy/paste notes to Libreoffice 
 - [x] Test with copy/paste notes to Libreoffice and then convert the rich text document to Markdown with Pandoc (tested)
 - [x] Use `pandoc input.docx -f docx -t markdown -o output-docx.md`
 - [x] then compare the results with our converter (not impressive, very limited)
 - [x] possibly have Pandoc compatible settings as an option (not worth it)
-- [ ] Test with copy/paste notes to Libreoffice 
+- [x] If regular Markdown is copied into Notes using the default font (10 - 12 size), then the formatting will be maintained as plain text Markdown (should not be modified by the converter)
+- [ ] four spaces can turn into code (but not always?) NOT USUALLY USED IN NOTES
+- [ ] Note to user: not everything converts nicely (In README and HELP)
 
 **Tabs**
-
-- [ ] tabs **on the start of lines** will be shown as code (in many Markdown readers), convert to indents instead? (OPTION IN SETTINGS)
-  - [ ] **turn into indents** (either as blockquote or nbsp with spaces) DEFAULT
-  - [ ] make no changes to tabs in the middle of lines!
-  - [ ] preserve so as to pass through to Markdown  (used for Cod only, but not used much. More common would be 4 spaces or ```) 
-  - [ ] turn into nbsp (ugly)
-  - [ ] turn into space(s) (like Pandoc)
-
-- [x] If regular Markdown is copied into Notes using the default font (10 - 12 size), then the formatting will be maintained as plain text Markdown (should not be modified by the converter)
-- [ ] four spaces can turn into code (but not always?)
-- [ ] only convert formatting instructions from XAML formatting
-- [ ] Note to user: not everything converts nicely (In README and HELP)
+- [x] only convert formatting instructions from XAML formatting (Tabs are the exception)
+- [x] tabs **on the start of lines** will be shown as code (in many Markdown readers), convert to indents instead? (OPTION IN SETTINGS)
+  - [x] **turn into indents** (either as blockquote or nbsp with spaces) DEFAULT
+  - [x] make no changes to tabs in the middle of lines!
+  - [x] NOT preserve so as to pass through to Markdown  (used for Code only, but not used much. More common would be 4 spaces or ```) 
+  - [ ] turn into space(s) (like Pandoc) (OPTIONAL but not needed)
 
 #### Completed XAML Conversion
 
@@ -124,7 +121,6 @@ once the app is packaged.)
 ## GUI & USER INTERFACE
 
 - [ ] move Progress UI to right side above log and display in both modes
-- [ ] Move to better-sqlite3 Throughout Core Package docs/migrate-to-better-sqlite.md
 - [ ] Implement improvements, refactoring from Electron App Evaluation, see EVALUATION.md
 
 ## APP-SPECIFIC FEATURES

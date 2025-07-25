@@ -1,14 +1,11 @@
 import React from 'react';
 import { FolderIcon, FileIcon, InfoIcon } from 'lucide-react';
 import { Button } from './ui/button';
-import { Progress } from './ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 interface ExportControlsProps {
   selectedDatabasePath: string | null;
   isExporting: boolean;
-  exportProgress: number;
-  exportMessage: string;
   lastExportSuccess: boolean;
   outputPath: string | null;
   onExport: () => void;
@@ -22,8 +19,6 @@ interface ExportControlsProps {
 export const ExportControls: React.FC<ExportControlsProps> = ({
   selectedDatabasePath,
   isExporting,
-  exportProgress,
-  exportMessage,
   lastExportSuccess,
   outputPath,
   onExport,
@@ -42,17 +37,6 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
         </div>
       </div>
 
-      {/* Export Progress */}
-      {isExporting && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Progress</span>
-            <span className="text-sm text-muted-foreground">{exportProgress}%</span>
-          </div>
-          <Progress value={exportProgress} className="w-full" />
-          <p className="text-xs text-muted-foreground">{exportMessage}</p>
-        </div>
-      )}
       
       {/* Action Buttons */}
       <div className="space-y-3">

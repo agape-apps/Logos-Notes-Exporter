@@ -3,6 +3,7 @@ import { useAppStore } from '../hooks/useAppStore';
 import { DEFAULT_SETTINGS } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ExportControls } from './ExportControls';
+import { ProgressDisplay } from './ProgressDisplay';
 import { OutputLog } from './OutputLog';
 
 interface BasicModeProps {
@@ -58,8 +59,6 @@ export const BasicMode: React.FC<BasicModeProps> = ({
             <ExportControls
               selectedDatabasePath={selectedDatabasePath}
               isExporting={isExporting}
-              exportProgress={exportProgress}
-              exportMessage={exportMessage}
               lastExportSuccess={lastExportSuccess}
               outputPath={outputPath}
               onExport={onExport}
@@ -68,6 +67,12 @@ export const BasicMode: React.FC<BasicModeProps> = ({
             />
           </CardContent>
         </Card>
+        
+        <ProgressDisplay
+          isExporting={isExporting}
+          exportProgress={exportProgress}
+          exportMessage={exportMessage}
+        />
       </div>
 
       {/* Right Column - Output Log */}
