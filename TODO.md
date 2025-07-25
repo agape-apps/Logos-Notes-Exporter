@@ -17,12 +17,15 @@
 - [x] During development and app use (manual refresh), if Electron reloads, the db connection is lost
 
 - [x] when exporting notes after the first start the screen refreshes and the log disappears
+- [x] Markdown: is it ok for list items to have a double space at the line ending? YES, OK
+
+## OPTIONAL ISSUES
+
 - [ ] check src/xaml-converter.ts, possibly too many blank lines in some cases, but mostly looking good
 - [ ] invalid offsets (-1) have been fixed but the book link is not that useful - check other options:
       - anchorLink: "https://app.logos.com/books/LLS%3A1.0.20"
       - in Logos-Exported-Notes/Conditional Immortality/LLS-1.0.20-0736.md
       - add a tag or note?
-- [x] Markdown: is it ok for list items to have a double space at the line ending? YES, OK
 
 ## DO NOT FIX
 
@@ -54,10 +57,10 @@ once the app is packaged.)
 
 ## EXPORT OPTIONS & FEATURES
 
-- [ ] Export a Notebook into one Markdown file 
+- [x] Export notes for each Notebook into one Markdown Index file 
 - [ ] Export just one Notebook (useful for big collections)
 - [ ] Export by Tags (not tested tags yet) OPTIONAL
-- [ ] Include the scripture reference in notes text
+- [x] Include the scripture reference in notes text (MOSTLY DONE, check)
 - [ ] add more flexible conversion options (depending on Markdown target) (OPTIONS IN SETTINGS)
 - [ ] Simplify Options
   - [ ] only Obsidian useful options for the default setting
@@ -66,8 +69,8 @@ once the app is packaged.)
   - [ ] all notes on one page (Notebook export) with only essential metadata for actual use (in Word or for printing)
   - [ ] individual options in hiddden panel
 - [ ] noteId: and logosBibleBook: are not needed in default metadata
-- [ ] Optional Wikilinks for images if export is for Obsidian
-- [ ] German version?
+- [ ] Use Wikilinks for images if export is for Obsidian (OPTIONAL)
+- [ ] German version (OPTIONAL)
 
 #### Completed Export Options
 
@@ -75,25 +78,27 @@ once the app is packaged.)
 - [x] Export all
 - [x] Add Logos Tags to Notes Metadata 
 
-## XAML CONVERSION
+## XAML CONVERSION 
 
-- [ ] It would make sense to test with copy/paste notes to Libreoffice and then convert the rich text document to Markdown with Pandoc
-- [ ] `pandoc input.docx -f docx -t markdown -o output-docx.md`
-- [ ] then compare the results with our converter (not impressive, very limited)
-- [ ] possibly have Pandoc compatible settings as an option (not worth it)
+- [x] Test with copy/paste notes to Libreoffice and then convert the rich text document to Markdown with Pandoc (tested)
+- [x] Use `pandoc input.docx -f docx -t markdown -o output-docx.md`
+- [x] then compare the results with our converter (not impressive, very limited)
+- [x] possibly have Pandoc compatible settings as an option (not worth it)
+- [ ] Test with copy/paste notes to Libreoffice 
 
 **Tabs**
 
-- [ ] tabs **on the start of lines** turn into code (in many Markdown readers), convert to indents instead? (OPTION IN SETTINGS)
+- [ ] tabs **on the start of lines** will be shown as code (in many Markdown readers), convert to indents instead? (OPTION IN SETTINGS)
   - [ ] **turn into indents** (either as blockquote or nbsp with spaces) DEFAULT
-  - [ ] preserve (so as to pass through to Markdown - for Code, but not used much) 
   - [ ] make no changes to tabs in the middle of lines!
+  - [ ] preserve so as to pass through to Markdown  (used for Cod only, but not used much. More common would be 4 spaces or ```) 
   - [ ] turn into nbsp (ugly)
   - [ ] turn into space(s) (like Pandoc)
+
 - [x] If regular Markdown is copied into Notes using the default font (10 - 12 size), then the formatting will be maintained as plain text Markdown (should not be modified by the converter)
 - [ ] four spaces can turn into code (but not always?)
 - [ ] only convert formatting instructions from XAML formatting
-- [ ] Note to user: not everything converts nicely OPTIONAL
+- [ ] Note to user: not everything converts nicely (In README and HELP)
 
 #### Completed XAML Conversion
 
@@ -172,6 +177,12 @@ once the app is packaged.)
 - [ ] Verified CLI functionality works correctly with Bun runtime using better-sqlite3 Node.js module.
 - [ ] Verified Electron functionality works correctly using better-sqlite3 Node.js module.
 - [ ] Tested this version, but does not work for this project as binary builds become impractical.
+
+### FIX HACKS 
+
+- Extract note content by reading the generated markdown file
+  // TODO: this is quite a hack. Instead the generated note content should be
+  // copied into each note file and the Notebook index file in the same loop.
 
 ### Cannot Fix
 

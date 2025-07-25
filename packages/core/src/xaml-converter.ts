@@ -336,6 +336,9 @@ export class XamlToMarkdownConverter {
       // Decode entities after parsing
       text = this.decodeEntities(text);
 
+      // Convert leading tabs to indents before other processing
+      text = this.convertLeadingTabsToIndents(text);
+
       // Check if this is monospace font (code) - preserve as-is without link conversion
       let fontFamily = attrs['@_FontFamily'] || '';
       
@@ -385,6 +388,8 @@ export class XamlToMarkdownConverter {
       let content = this.extractElementContent(s);
       // Decode entities after parsing
       content = this.decodeEntities(content);
+      // Convert leading tabs to indents before formatting
+      content = this.convertLeadingTabsToIndents(content);
       const formatted = this.applyInlineFormatting(content, s, paragraphElement);
       result += formatted;
     }
@@ -771,14 +776,16 @@ export class XamlToMarkdownConverter {
 
     let content = '';
 
-    // Direct text - clean Unicode issues
+    // Direct text - clean Unicode issues and convert leading tabs
     if (element['#text']) {
-      content += this.unicodeCleaner.cleanXamlText(element['#text']);
+      const cleanText = this.unicodeCleaner.cleanXamlText(element['#text']);
+      content += this.convertLeadingTabsToIndents(cleanText);
     }
 
-    // Text attribute - clean Unicode issues
+    // Text attribute - clean Unicode issues and convert leading tabs
     if (element['@_Text']) {
-      content += this.unicodeCleaner.cleanXamlText(element['@_Text']);
+      const cleanText = this.unicodeCleaner.cleanXamlText(element['@_Text']);
+      content += this.convertLeadingTabsToIndents(cleanText);
     }
 
     // Process child elements
@@ -1049,6 +1056,40 @@ export class XamlToMarkdownConverter {
     // Each indent level: &nbsp; + 4 spaces
     const singleIndent = '&nbsp;    ';
     return singleIndent.repeat(level);
+  }
+
+  /**
+   * Convert leading tabs in text content to appropriate indentation format.
+   * Each consecutive tab at the beginning of a line becomes one indent level.
+   * Maximum of 6 indent levels are supported.
+   * Tabs in the middle of lines are preserved unchanged.
+   */
+  private convertLeadingTabsToIndents(text: string): string {
+    if (!text) return text;
+
+    // Split into lines to process each line individually
+    const lines = text.split('\n');
+    const processedLines = lines.map(line => {
+      // Only process lines that start with tabs
+      const leadingTabsMatch = line.match(/^(\t+)/);
+      if (!leadingTabsMatch) {
+        return line; // No leading tabs, return unchanged
+      }
+
+      const leadingTabs = leadingTabsMatch[1];
+      const remainingContent = line.substring(leadingTabs.length);
+      
+      // Calculate indent level (max 6)
+      const indentLevel = Math.min(leadingTabs.length, 6);
+      
+      // Generate indent prefix using existing formatIndent logic
+      const indentPrefix = this.formatIndent(indentLevel);
+      
+      // Return line with tabs converted to indents
+      return indentPrefix + remainingContent;
+    });
+
+    return processedLines.join('\n');
   }
 
   /**
