@@ -39,6 +39,8 @@ export interface CoreExportOptions {
   indentsNotQuotes?: boolean;
   verbose?: boolean;
   dryRun?: boolean;
+  /** Filtering options */
+  notebook?: string;
 }
 
 /**
@@ -66,6 +68,8 @@ export interface ExportResult {
   success: boolean;
   outputPath?: string;
   error?: string;
+  notebookNotFound?: boolean;
+  requestedNotebook?: string;
   stats?: {
     totalNotes: number;
     notesWithContent: number;
@@ -166,8 +170,31 @@ export class LogosNotesExporter {
       // Organize notes by notebooks
       this.log('📚 Organizing notes by notebooks...');
       this.progress(10, 'Organizing notes by notebooks...');
-      const notebookGroups = await this.organizer.organizeNotes();
+      let notebookGroups = await this.organizer.organizeNotes();
       this.log(`Found ${notebookGroups.length} notebook groups`);
+
+      // Filter by specific notebook if requested
+      if (this.options.notebook) {
+        const targetNotebook = this.options.notebook;
+        this.log(`🔍 Filtering for notebook: "${targetNotebook}"`);
+        
+        const filteredGroups = notebookGroups.filter(group => {
+          const notebookTitle = group.notebook?.title || 'No Notebook';
+          return notebookTitle.toLowerCase() === targetNotebook.toLowerCase();
+        });
+
+        if (filteredGroups.length === 0) {
+          this.log(`❌ Notebook not found: "${targetNotebook}". Export aborted.`);
+          return {
+            success: false,
+            notebookNotFound: true,
+            requestedNotebook: targetNotebook
+          };
+        }
+
+        notebookGroups = filteredGroups;
+        this.log(`✅ Found notebook "${filteredGroups[0].notebook?.title || 'No Notebook'}" with ${filteredGroups[0].notes.length} notes`);
+      }
 
       // Get organization statistics
       const stats = this.organizer.getOrganizationStats();

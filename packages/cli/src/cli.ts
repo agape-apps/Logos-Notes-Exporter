@@ -52,6 +52,8 @@ interface CLIOptions {
   dryRun?: boolean;
   help?: boolean;
   version?: boolean;
+  /** Filtering options */
+  notebook?: string;
 }
 
 const HELP_TEXT = `
@@ -88,6 +90,9 @@ OPTIONS:
   --dry-run             Show what would be done without writing files
   --help, -h            Show this help
   --version             Show version
+  
+  FILTERING:
+  --notebook            Export only notes from specified notebook name
 
 EXAMPLES:
   # Basic export (auto-locates database)
@@ -110,6 +115,9 @@ EXAMPLES:
   
   # Export using a custom database location
   LogosNotesExporter --database ./path/to/notestool.db
+  
+  # Export only notes from a specific notebook
+  LogosNotesExporter --notebook "Bible Study Notes"
 
 NOTES:
   - All database operations are READ-ONLY for safety, Logos can continue to be used while exporting
@@ -158,6 +166,9 @@ function parseCommandLine(): CLIOptions {
       'dry-run': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
       version: { type: 'boolean' },
+      
+      // Filtering options
+      notebook: { type: 'string' },
     },
     allowPositionals: false,
   });
@@ -183,6 +194,7 @@ function parseCommandLine(): CLIOptions {
     dryRun: parsed.values['dry-run'],
     help: parsed.values.help,
     version: parsed.values.version,
+    notebook: parsed.values.notebook,
   };
 
   return options;
@@ -257,6 +269,7 @@ async function main(): Promise<void> {
     indentsNotQuotes: options.indentsNotQuotes,
     verbose: options.verbose,
     dryRun: options.dryRun,
+    notebook: options.notebook,
   };
 
   // Create callbacks for CLI output
@@ -266,10 +279,23 @@ async function main(): Promise<void> {
   };
 
   // Create and run exporter
-  const exporter = new LogosNotesExporter(coreOptions, callbacks);
-  const result = await exporter.export();
+  try {
+    const exporter = new LogosNotesExporter(coreOptions, callbacks);
+    const result = await exporter.export();
 
-  if (!result.success) {
+    if (!result.success) {
+      if (result.notebookNotFound) {
+        // Notebook not found is a user input issue, not a system error
+        // Exit cleanly with success status
+        process.exit(0);
+      } else {
+        // Other export errors are system errors
+        process.exit(1);
+      }
+    }
+  } catch (error) {
+    // Unexpected errors should still cause error exit
+    console.error('❌ Fatal error:', error);
     process.exit(1);
   }
 }

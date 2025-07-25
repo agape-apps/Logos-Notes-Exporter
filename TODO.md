@@ -8,6 +8,9 @@
 
 ## BUGS & ISSUES
 
+- this date is not relevant to the context: **Created:** 4/15/2017   (Notebook created?). Also improve headings
+- fix validation issues: 📋 Validation FAILED - 31 files checked, 2 errors ❌ Errors found: Note count mismatch: expected 29, found 31
+
 - [ ] Create a subfolder always: Manual selection without creating a default folder could cause problems: /Users/christian/Documents/Test Output
 - [x] remove unused dev db location LogosDocuments
 - [x] use consistent default export location for Notes macOS & Windows Documents
@@ -120,31 +123,31 @@ once the app is packaged.)
 
 ## GUI & USER INTERFACE
 
-- [ ] move Progress UI to right side above log and display in both modes
+- [x] separate Progress display into dedicated card component in Basic view
 - [ ] Implement improvements, refactoring from Electron App Evaluation, see EVALUATION.md
 
 ## APP-SPECIFIC FEATURES
 
-### For LibreOffice
+### For LibreOffice/Word
 
 - [ ] Paste Markdown from Typora and MarkText (same result)
 - [ ] Export to Word .docx from Typora
 
 ### For Obsidian 
 
-- [ ] view all notes from one notebook in one document, similar to the notes exporter
-  - [ ] Verse references
-  - [ ] Book references 
-  - [ ] Note text
-  - [ ] —- divider
-  - [ ] optionally exclude highlights
-  - [ ] Use README.md index files for that
+- [x] view all notes from one notebook in one document, similar to the notes exporter
+  - [x] Verse references
+  - [ ] Book references ?
+  - [x] Note text
+  - [x] —- divider
+  - [x] optionally exclude highlights
+  - [x] Use README.md index files for that: INDEX.md
 - [ ] Obsidian plugins could show verses on hover. Many recognize Bible references and can also link to a Bible for example
 - [ ] Note names are unique and could be linked to with Wikilinks from other notes in Obsidian (TEST)
 
 #### Completed Obsidian Features
 
-- [x] view formatted notes one by one
+- [x] view formatted notes inside Notebooks one by one
 
 ## CODE IMPROVEMENTS
 
