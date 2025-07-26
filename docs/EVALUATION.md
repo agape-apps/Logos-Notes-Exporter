@@ -15,7 +15,7 @@ The Electron implementation of Logos Notes Exporter successfully delivers a func
 - **React 18 with TypeScript**: Correctly using React 18.3.1 (consider React 19 upgrade)
 - **ShadcnUI Components**: All required UI components are implemented
 - **Tailwind CSS**: Properly integrated with v4.1.11
-- **Zustand State Management**: Correctly implemented in [`useAppStore.ts`](packages/electron/src/renderer/hooks/useAppStore.ts:1)
+- **Zustand State Management**: Correctly implemented in [`useStore.ts`](packages/electron/src/renderer/hooks/useStore.ts:1)
 - **Electron IPC**: Well-structured communication between main/renderer processes
 - **YAML Settings**: Persistent settings using yaml package as specified
 
@@ -102,7 +102,7 @@ The Electron implementation of Logos Notes Exporter successfully delivers a func
 
 1. **Default Settings**: Duplicated in multiple locations: DONE
 
-   - [`useAppStore.ts:28-42`](packages/electron/src/renderer/hooks/useAppStore.ts:28) rename to useStore.ts
+   - [`useStore.ts:28-42`](packages/electron/src/renderer/hooks/useStore.ts:28) renamed from useAppStore.ts
    - [`settings.ts:87-101`](packages/electron/src/main/settings.ts:87)
    - [`types/index.ts:111-125`](packages/electron/src/renderer/types/index.ts:111)
 

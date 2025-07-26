@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { toast } from 'sonner';
 import { SettingsIcon, ArrowLeftIcon } from 'lucide-react';
-import { useAppStore } from './hooks/useAppStore';
+import { useStore } from './hooks/useStore';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip';
@@ -34,7 +34,7 @@ const App: React.FC = () => {
     setSettings,
     setSelectedDatabasePath,
     selectedDatabasePath
-  } = useAppStore();
+  } = useStore();
 
   const [isInitialized, setIsInitialized] = useState(false);
 

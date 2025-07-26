@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppStore } from '../hooks/useAppStore';
+import { useStore } from '../hooks/useStore';
 import { DEFAULT_SETTINGS } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ExportControls } from './ExportControls';
@@ -34,7 +34,7 @@ export const BasicMode: React.FC<BasicModeProps> = ({
   onOpenFolder,
   onSelectDatabase,
 }) => {
-  const { settings } = useAppStore();
+  const { settings } = useStore();
   
   // Helper function to check if settings have been changed from defaults
   const hasCustomSettings = () => {

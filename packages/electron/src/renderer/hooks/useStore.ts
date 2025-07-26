@@ -27,7 +27,7 @@ interface AppStore extends AppState {
 
 import { DEFAULT_SETTINGS } from '../types';
 
-export const useAppStore = create<AppStore>()(
+export const useStore = create<AppStore>()(
   subscribeWithSelector((set, _get) => ({
     // Initial state
     mode: "basic",
@@ -92,19 +92,19 @@ export const useAppStore = create<AppStore>()(
 );
 
 // Selector hooks for common state slices
-export const useMode = () => useAppStore((state) => state.mode);
-export const useSettings = () => useAppStore((state) => state.settings);
-export const useExportState = () => useAppStore((state) => ({
+export const useMode = () => useStore((state) => state.mode);
+export const useSettings = () => useStore((state) => state.settings);
+export const useExportState = () => useStore((state) => ({
   isExporting: state.isExporting,
   exportProgress: state.exportProgress,
   exportMessage: state.exportMessage,
   lastExportSuccess: state.lastExportSuccess,
   outputPath: state.outputPath,
 }));
-export const useLogMessages = () => useAppStore((state) => state.logMessages);
+export const useLogMessages = () => useStore((state) => state.logMessages);
 
 // Actions selectors
-export const useAppActions = () => useAppStore((state) => ({
+export const useAppActions = () => useStore((state) => ({
   setMode: state.setMode,
   setSettings: state.setSettings,
   updateSettings: state.updateSettings,

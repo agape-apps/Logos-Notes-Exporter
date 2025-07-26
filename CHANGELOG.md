@@ -33,3 +33,4 @@
 - 2025-07-24 fix: simplified environment detection in config module to prevent misleading browser warnings in Electron renderer context
 - 2025-07-24 feat: enhanced notebook index files - renamed README.md to INDEX.md with inline note content, alphabetical sorting, and highlights support
 - 2025-07-25: Implemented tab-to-indent conversion - leading tabs in XAML text are converted to user's preferred indent format (blockquotes or nbsp)
+- 2025-07-26 refactor: complete rename from useAppStore to useStore including filename and documentation
