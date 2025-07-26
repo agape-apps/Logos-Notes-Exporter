@@ -167,19 +167,19 @@ The Electron implementation of Logos Notes Exporter successfully delivers a func
 
 ### Medium Priority
 
-1. **Error Handling Standardization**
+1. **Error Handling Standardization** (DO NOT IMPLEMENT - see branch)
 
    - Create a centralized error handler
    - Implement proper error boundaries
    - Standardize error message format
 
-2. **Performance Optimizations**
+2. **Performance Optimizations** (NOT NEEDED)
 
    - Memoize expensive computations
    - Optimize re-renders with React.memo
    - Debounce settings saves more efficiently
 
-3. **Testing Infrastructure**
+3. **Testing Infrastructure** (TODO)
    - Add unit tests for components
    - Integration tests for IPC communication
    - E2E tests for critical user flows
@@ -188,80 +188,14 @@ The Electron implementation of Logos Notes Exporter successfully delivers a func
 
 1. **UI Enhancements**
 
-   - Add animations for mode transitions
-   - Implement drag & drop functionality (optional)
-   - Enhanced keyboard navigation(check)
+   - Add animations for mode transitions (NO)
+   - Implement drag & drop functionality (NO)
+   - Enhanced keyboard navigation(optional, check)
 
 2. **Developer Experience**
    - Add JSDoc comments for public APIs
    - Create development documentation (partial in docs/)
-   - Add debugging utilities
-
-## 5. Code Examples for Improvements
-
-### Component Extraction Example
-
-```typescript
-// BasicMode.tsx
-export const BasicMode: React.FC<BasicModeProps> = ({
-  onExport,
-  onOpenFolder,
-  onSelectDatabase,
-  isExporting,
-  exportProgress,
-  databaseStatus,
-}) => {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {/* Basic mode UI */}
-    </div>
-  );
-};
-```
-
-### Type Safety Example
-
-```typescript
-// Better type definitions
-type ExportProcess = {
-  pid: number;
-  kill: () => boolean;
-  on: (event: string, handler: Function) => void;
-};
-
-interface ValidationResult {
-  valid: boolean;
-  error?: string;
-  warnings?: string[];
-}
-```
-
-### Error Handling Example
-
-```typescript
-// Centralized error handler
-class ExportError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public recoverable: boolean = true
-  ) {
-    super(message);
-    this.name = "ExportError";
-  }
-}
-
-function handleExportError(error: unknown): ExportResult {
-  if (error instanceof ExportError) {
-    return {
-      success: false,
-      error: error.message,
-      recoverable: error.recoverable,
-    };
-  }
-  // Handle other error types
-}
-```
+   - Add debugging utilities (NO)
 
 ## 6. Summary
 
@@ -276,7 +210,7 @@ The Electron implementation successfully delivers the core functionality specifi
 
 ### Key Areas for Improvement
 
-- Reduce code duplication through better abstraction
+- Reduce code duplication through better abstraction (mostly DONE)
 - Improve type safety by eliminating `any` types DONE
 - Complete missing features (export cancellation, database instructions)
-- Refactor large components into smaller, testable units
+- Refactor large components into smaller, testable units (TODO)
