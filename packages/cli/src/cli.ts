@@ -2,13 +2,24 @@
 import { parseArgs } from 'util';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { 
+import {
   LogosNotesExporter,
   type CoreExportOptions,
   type ExportCallbacks,
   NotesToolDatabase
 } from '@logos-notes-exporter/core';
 import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
+import {
+  LogosExportError,
+  DatabaseError,
+  ValidationError,
+  FileSystemError,
+  NetworkError,
+  XamlConversionError,
+  ErrorSeverity,
+  
+  Logger
+} from '@logos-notes-exporter/core';
 
 /**
  * Read version from package.json
@@ -201,19 +212,116 @@ function parseCommandLine(): CLIOptions {
 }
 
 /**
- * Validate CLI options
+ * CLI Logger for structured output
+ */
+const cliLogger = new Logger({ enableConsole: true });
+
+/**
+ * Display error with appropriate formatting and exit codes
+ */
+function handleError(error: Error, exitCode: number = 1): never {
+  if (error instanceof LogosExportError) {
+    const details = error.getDetails();
+    
+    console.error(`❌ ${error.message}`);
+    
+    if (error.severity === ErrorSeverity.FATAL) {
+      console.error(`   Severity: FATAL - Application cannot continue`);
+    } else if (error.severity === ErrorSeverity.ERROR) {
+      console.error(`   Severity: ERROR - Operation failed`);
+    }
+    
+    if (details.category) {
+      console.error(`   Category: ${details.category}`);
+    }
+    
+    if (details.userMessage) {
+      console.error(`   Details: ${details.userMessage}`);
+    }
+    
+    if (details.suggestions && details.suggestions.length > 0) {
+      console.error(`   Suggestions:`);
+      details.suggestions.forEach((suggestion: string) => {
+        console.error(`     • ${suggestion}`);
+      });
+    }
+    
+    cliLogger.logError(error);
+  } else if (error instanceof DatabaseError) {
+    console.error(`❌ Database Error: ${error.message}`);
+    console.error(`   Please check your database file path and ensure Logos is not preventing access.`);
+    cliLogger.logError(error);
+  } else if (error instanceof ValidationError) {
+    console.error(`❌ Validation Error: ${error.message}`);
+    console.error(`   Please check your command line arguments and try again.`);
+    cliLogger.logError(error);
+  } else if (error instanceof FileSystemError) {
+    console.error(`❌ File System Error: ${error.message}`);
+    console.error(`   Please check file permissions and available disk space.`);
+    cliLogger.logError(error);
+  } else if (error instanceof NetworkError) {
+    console.error(`❌ Network Error: ${error.message}`);
+    console.error(`   Please check your internet connection and try again.`);
+    cliLogger.logError(error);
+  } else if (error instanceof XamlConversionError) {
+    console.error(`❌ XAML Conversion Error: ${error.message}`);
+    console.error(`   There was an issue converting note content to Markdown.`);
+    cliLogger.logError(error);
+  } else {
+    console.error(`❌ Unexpected Error: ${error.message}`);
+    if (error.stack) {
+      console.error(`   Stack trace: ${error.stack}`);
+    }
+    cliLogger.logError(error);
+  }
+  
+  process.exit(exitCode);
+}
+
+/**
+ * Validate CLI options with enhanced error handling
  */
 function validateOptions(options: CLIOptions): void {
-  // Check database exists if provided
-  if (options.database && !existsSync(options.database)) {
-    console.error(`❌ Database file not found: ${options.database}`);
-    process.exit(1);
-  }
+  try {
+    // Check database exists if provided
+    if (options.database && !existsSync(options.database)) {
+      throw new ValidationError(
+        `Database file not found: ${options.database}`,
+        'database',
+        options.database,
+        {
+          userMessage: 'The specified database file does not exist',
+          suggestions: [
+            'Use --list-databases to see available database locations',
+            'Check the file path for typos',
+            'Ensure you have read permissions for the file'
+          ]
+        }
+      );
+    }
 
-  // Validate date format
-  if (options.dateFormat && !['iso', 'locale', 'short'].includes(options.dateFormat)) {
-    console.error(`❌ Invalid date format: ${options.dateFormat}. Must be one of: iso, locale, short`);
-    process.exit(1);
+    // Validate date format
+    if (options.dateFormat && !['iso', 'locale', 'short'].includes(options.dateFormat)) {
+      throw new ValidationError(
+        `Invalid date format: ${options.dateFormat}`,
+        'dateFormat',
+        options.dateFormat,
+        {
+          userMessage: 'Date format must be one of: iso, locale, short',
+          suggestions: [
+            'Use --date-format iso for ISO 8601 format (2023-12-25)',
+            'Use --date-format locale for locale-specific format',
+            'Use --date-format short for abbreviated format'
+          ]
+        }
+      );
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      handleError(error, 1);
+    } else {
+      handleError(new ValidationError('Invalid CLI options', undefined, undefined, { metadata: { originalError: error } }), 1);
+    }
   }
 }
 
@@ -303,8 +411,13 @@ async function main(): Promise<void> {
 // Run CLI if this file is executed directly
 if (import.meta.main) {
   main().catch((error) => {
-    console.error('❌ Fatal error:', error);
-    process.exit(1);
+    if (error instanceof Error) {
+      handleError(error, 1);
+    } else {
+      console.error('❌ Fatal error: Unknown error occurred');
+      console.error(String(error));
+      process.exit(1);
+    }
   });
 }
 

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { toast } from 'sonner';
 import { SettingsIcon, ArrowLeftIcon } from 'lucide-react';
-import { useStore } from './hooks/useStore';
+import { useStore, useErrorState, useErrorActions } from './hooks/useStore';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip';
 import { BasicMode } from './components/BasicMode';
 import { AdvancedMode } from './components/AdvancedMode';
+import { ErrorDisplay } from './components/ErrorDisplay';
 import type { ExportSettings, AppMode } from './types';
 import { DEFAULT_SETTINGS } from './types';
 
@@ -35,6 +36,14 @@ const App: React.FC = () => {
     setSelectedDatabasePath,
     selectedDatabasePath
   } = useStore();
+
+  const errorState = useErrorState();
+  const {
+    setCurrentError,
+    clearCurrentError,
+    addErrorToHistory,
+    setShowErrorDetails
+  } = useErrorActions();
 
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -67,6 +76,12 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Renderer: Failed to initialize app:', error);
         addLogMessage('❌ Failed to initialize app');
+        setCurrentError({
+          message: 'Failed to initialize application',
+          category: 'initialization',
+          severity: 'error',
+          suggestions: ['Try restarting the application', 'Check if Logos is properly installed']
+        });
         setIsInitialized(true);
       }
     };
@@ -253,6 +268,13 @@ const App: React.FC = () => {
         setSelectedDatabasePath(path);
         setSettings({ databasePath: path });
         addLogMessage(`📂 Database detected: ${path}`);
+      }),
+
+      // Listen for structured errors from main process
+      window.electronAPI.onStructuredError((error: import('./types').StructuredError) => {
+        console.error('Received structured error:', error);
+        setCurrentError(error);
+        addErrorToHistory(error);
       })
     ];
 
@@ -281,6 +303,16 @@ const App: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : String(error);
       addLogMessage(`❌ Export failed: ${errorMessage}`);
       toast.error(`Export failed: ${errorMessage}`);
+      setCurrentError({
+        message: `Export failed: ${errorMessage}`,
+        category: 'export',
+        severity: 'error',
+        suggestions: [
+          'Check if the database file exists and is accessible',
+          'Verify the output directory has write permissions',
+          'Try restarting the application'
+        ]
+      });
       setExporting(false);
     }
   };
@@ -291,7 +323,18 @@ const App: React.FC = () => {
         await window.electronAPI.openOutputFolder(outputPath);
       } catch (error) {
         console.error('Failed to open folder:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         toast.error('Failed to open output folder');
+        setCurrentError({
+          message: `Failed to open output folder: ${errorMessage}`,
+          category: 'filesystem',
+          severity: 'error',
+          suggestions: [
+            'Check if the output folder still exists',
+            'Verify you have permissions to access the folder',
+            'Try navigating to the folder manually'
+          ]
+        });
       }
     }
   };
@@ -307,7 +350,18 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to select database:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error('Failed to select database');
+      setCurrentError({
+        message: `Failed to select database: ${errorMessage}`,
+        category: 'database',
+        severity: 'error',
+        suggestions: [
+          'Check if Logos is installed and has created database files',
+          'Verify you have permissions to access the selected file',
+          'Try selecting a different database file'
+        ]
+      });
     }
   };
 
@@ -327,7 +381,18 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to select output directory:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error('Failed to select output directory');
+      setCurrentError({
+        message: `Failed to select output directory: ${errorMessage}`,
+        category: 'filesystem',
+        severity: 'error',
+        suggestions: [
+          'Ensure you have write permissions to the selected directory',
+          'Try selecting a different output directory',
+          'Check if the directory path is valid'
+        ]
+      });
     }
   };
 
@@ -400,6 +465,18 @@ const App: React.FC = () => {
 
         {/* Main Content */}
         <div className="px-8 py-8 h-[calc(100vh-88px)]">
+          {/* Error Display */}
+          {errorState.currentError && (
+            <div className="mb-6">
+              <ErrorDisplay
+                error={errorState.currentError}
+                onDismiss={clearCurrentError}
+                showDetails={errorState.showErrorDetails}
+                onToggleDetails={() => setShowErrorDetails(!errorState.showErrorDetails)}
+              />
+            </div>
+          )}
+
           {mode === "basic" ? (
             <BasicMode
               selectedDatabasePath={selectedDatabasePath || null}

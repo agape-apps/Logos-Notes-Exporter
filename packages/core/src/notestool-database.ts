@@ -1,6 +1,7 @@
 
 import { Database } from 'bun:sqlite';
 import { DatabaseLocator, type DatabaseLocation } from './database-locator.js';
+import { DatabaseError, Logger, ErrorSeverity, ErrorCategory } from './errors/index.js';
 
 export interface NotesToolNote {
   id: number;
@@ -76,50 +77,260 @@ export interface NoteAnchorTextRange {
 export class NotesToolDatabase {
   private db: Database;
   private dbLocation: DatabaseLocation;
+  private logger: Logger;
 
-  constructor(dbPath?: string) {
-    this.dbLocation = this.findDatabase(dbPath);
-    
-    // Validate the database before opening
-    const validation = DatabaseLocator.validateDatabase(this.dbLocation.path);
-    if (!validation.valid) {
-      throw new Error(`Invalid database: ${validation.error}`);
+  constructor(dbPath?: string, logger?: Logger) {
+    this.logger = logger || new Logger({ enableConsole: true, level: 1 });
+    try {
+      this.dbLocation = this.findDatabase(dbPath);
+      
+      // Validate the database before opening
+      const validation = DatabaseLocator.validateDatabase(this.dbLocation.path);
+      if (!validation.valid) {
+        throw new DatabaseError(
+          `Invalid database: ${validation.error}`,
+          {
+            component: 'NotesToolDatabase',
+            operation: 'constructor',
+            metadata: { path: this.dbLocation.path, validation }
+          }
+        );
+      }
+
+      // Open database in READ-ONLY mode for safety
+      this.db = new Database(this.dbLocation.path, { readonly: true });
+      
+      this.logger.logInfo('Database opened successfully', {
+        path: this.dbLocation.path,
+        type: this.dbLocation.type,
+        size: this.dbLocation.size
+      }, 'NotesToolDatabase');
+      
+    } catch (error) {
+      if (error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError(
+        'Failed to initialize database connection',
+        {
+          component: 'NotesToolDatabase',
+          operation: 'constructor',
+          metadata: { providedPath: dbPath }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
-
-    // Open database in READ-ONLY mode for safety
-    this.db = new Database(this.dbLocation.path, { readonly: true });
   }
 
   /**
    * Find the best database location
    */
   private findDatabase(customPath?: string): DatabaseLocation {
-    // 1. If custom path provided, use it
-    if (customPath) {
-      const customLocation = DatabaseLocator.checkCustomPath(customPath);
-      if (!customLocation) {
-        throw new Error(`Invalid custom database path: ${customPath}`);
+    try {
+      // 1. If custom path provided, use it
+      if (customPath) {
+        const customLocation = DatabaseLocator.checkCustomPath(customPath);
+        if (!customLocation) {
+          throw new DatabaseError(
+            `Invalid custom database path: ${customPath}`,
+            {
+              component: 'NotesToolDatabase',
+              operation: 'findDatabase',
+              metadata: { customPath },
+              suggestions: [
+                'Verify the file path is correct',
+                'Check file permissions',
+                'Ensure the file exists and is accessible'
+              ]
+            }
+          );
+        }
+        if (!customLocation.exists) {
+          throw new DatabaseError(
+            `Database file not found at custom path: ${customPath}`,
+            {
+              component: 'NotesToolDatabase',
+              operation: 'findDatabase',
+              metadata: { customPath },
+              suggestions: [
+                'Check if the file path is correct',
+                'Verify Logos has created notes',
+                'Try locating the database manually'
+              ]
+            }
+          );
+        }
+        return customLocation;
       }
-      if (!customLocation.exists) {
-        throw new Error(`Database file not found at custom path: ${customPath}`);
-      }
-      return customLocation;
-    }
 
-    // 2. Search for database in standard locations
-    const bestLocation = DatabaseLocator.getBestDatabase();
-    if (!bestLocation) {
-      const locations = DatabaseLocator.displayLocations();
-      const instructions = DatabaseLocator.getSearchInstructions();
-      
-      throw new Error(
-        `No Logos NotesTool database found in standard locations.\n\n` +
-        locations.join('\n') + '\n\n' +
-        instructions.join('\n')
+      // 2. Search for database in standard locations
+      const bestLocation = DatabaseLocator.getBestDatabase();
+      if (!bestLocation) {
+        const locations = DatabaseLocator.displayLocations();
+        const instructions = DatabaseLocator.getSearchInstructions();
+        
+        throw new DatabaseError(
+          'No Logos NotesTool database found in standard locations',
+          {
+            component: 'NotesToolDatabase',
+            operation: 'findDatabase',
+            userMessage: 'Cannot find Logos notes database. Please locate it manually.',
+            suggestions: [
+              'Specify a custom database path',
+              'Ensure Logos Bible Software is installed',
+              'Check if you have created any notes in Logos',
+              'Look for notestool.db in your Documents/Logos folder'
+            ],
+            metadata: { 
+              searchedLocations: locations,
+              instructions 
+            }
+          }
+        );
+      }
+
+      return bestLocation;
+    } catch (error) {
+      if (error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError(
+        'Failed to locate database',
+        {
+          component: 'NotesToolDatabase',
+          operation: 'findDatabase',
+          metadata: { customPath }
+        },
+        error instanceof Error ? error : new Error(String(error))
       );
     }
+  }
 
-    return bestLocation;
+  /**
+   * Execute a database query with error handling
+   */
+  private executeQuery(
+    query: string,
+    params: any[] = [],
+    operation: string,
+    errorMessage: string,
+    metadata?: Record<string, any>
+  ): any {
+    try {
+      this.logger.logDebug(`Executing query: ${operation}`, {
+        query: query.replace(/\s+/g, ' ').trim(),
+        paramCount: params.length,
+        ...metadata
+      }, 'NotesToolDatabase');
+
+      const startTime = Date.now();
+      const result = params.length > 0 
+        ? this.db.query(query).all(...params)
+        : this.db.query(query).all();
+      const duration = Date.now() - startTime;
+
+      this.logger.logDebug(`Query completed: ${operation}`, {
+        resultCount: Array.isArray(result) ? result.length : 1,
+        duration,
+        ...metadata
+      }, 'NotesToolDatabase');
+
+      return result;
+    } catch (error) {
+      this.logger.logError(new DatabaseError(
+        errorMessage,
+        {
+          component: 'NotesToolDatabase',
+          operation,
+          metadata: {
+            query: query.replace(/\s+/g, ' ').trim(),
+            paramCount: params.length,
+            ...metadata
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      ));
+      
+      throw new DatabaseError(
+        errorMessage,
+        {
+          component: 'NotesToolDatabase',
+          operation,
+          userMessage: 'Database query failed. Please check your database file.',
+          suggestions: [
+            'Verify the database is not corrupted',
+            'Ensure Logos is not currently running',
+            'Try restarting the application',
+            'Check available system memory'
+          ],
+          metadata: {
+            query: query.replace(/\s+/g, ' ').trim(),
+            paramCount: params.length,
+            ...metadata
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
+  /**
+   * Execute a single-row query with error handling
+   */
+  private executeQuerySingle(
+    query: string,
+    params: any[] = [],
+    operation: string,
+    errorMessage: string,
+    metadata?: Record<string, any>
+  ): any {
+    try {
+      this.logger.logDebug(`Executing single query: ${operation}`, {
+        query: query.replace(/\s+/g, ' ').trim(),
+        paramCount: params.length,
+        ...metadata
+      }, 'NotesToolDatabase');
+
+      const result = params.length > 0 
+        ? this.db.query(query).get(...params)
+        : this.db.query(query).get();
+
+      return result;
+    } catch (error) {
+      this.logger.logError(new DatabaseError(
+        errorMessage,
+        {
+          component: 'NotesToolDatabase',
+          operation,
+          metadata: {
+            query: query.replace(/\s+/g, ' ').trim(),
+            paramCount: params.length,
+            ...metadata
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      ));
+      
+      throw new DatabaseError(
+        errorMessage,
+        {
+          component: 'NotesToolDatabase',
+          operation,
+          userMessage: 'Database query failed. Please check your database file.',
+          suggestions: [
+            'Verify the database is not corrupted',
+            'Ensure Logos is not currently running',
+            'Try restarting the application'
+          ],
+          metadata: {
+            query: query.replace(/\s+/g, ' ').trim(),
+            paramCount: params.length,
+            ...metadata
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
   }
 
   /**
@@ -170,7 +381,12 @@ export class NotesToolDatabase {
       ORDER BY CreatedDate, NoteId
     `;
 
-    return this.db.query(query).all() as NotesToolNote[];
+    return this.executeQuery(
+      query,
+      [],
+      'getActiveNotes',
+      'Failed to retrieve active notes'
+    ) as NotesToolNote[];
   }
 
   /**
@@ -190,11 +406,22 @@ export class NotesToolDatabase {
     if (noteIds && noteIds.length > 0) {
       const placeholders = noteIds.map(() => '?').join(',');
       query += ` WHERE NoteId IN (${placeholders})`;
-      return this.db.query(query).all(...noteIds) as BibleReference[];
+      return this.executeQuery(
+        query,
+        noteIds,
+        'getBibleReferences',
+        'Failed to retrieve Bible references for specific notes',
+        { noteCount: noteIds.length }
+      ) as BibleReference[];
     }
 
     query += ` ORDER BY NoteId, AnchorIndex`;
-    return this.db.query(query).all() as BibleReference[];
+    return this.executeQuery(
+      query,
+      [],
+      'getBibleReferences',
+      'Failed to retrieve all Bible references'
+    ) as BibleReference[];
   }
 
   /**
@@ -233,7 +460,13 @@ export class NotesToolDatabase {
       WHERE ExternalId = ? AND IsDeleted = 0 AND IsTrashed = 0
     `;
 
-    return this.db.query(query).get(externalId) as Notebook | null;
+    return this.executeQuerySingle(
+      query,
+      [externalId],
+      'getNotebook',
+      'Failed to retrieve notebook by external ID',
+      { externalId }
+    ) as Notebook | null;
   }
 
   /**
@@ -450,6 +683,13 @@ export class NotesToolDatabase {
    * Close database connection
    */
   close(): void {
-    this.db.close();
+    try {
+      this.db.close();
+      this.logger.logInfo('Database connection closed successfully', {}, 'NotesToolDatabase');
+    } catch (error) {
+      this.logger.logWarn('Error closing database connection', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'NotesToolDatabase');
+    }
   }
 } 

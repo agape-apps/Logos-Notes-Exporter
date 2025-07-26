@@ -1,3 +1,5 @@
+import { ValidationError, Logger, ErrorSeverity } from './errors/index.js';
+
 export interface BibleBookMapping {
   anchorId: number;
   englishName: string;
@@ -5,6 +7,15 @@ export interface BibleBookMapping {
   chapterCount: number;
   status: string;
   logosBibleId?: string;
+}
+
+export interface ReferenceDecodingStats {
+  totalReferences: number;
+  successfulDecodes: number;
+  failedDecodes: number;
+  unknownBooks: number;
+  malformedReferences: number;
+  errors: ValidationError[];
 }
 
 export interface DecodedReference {
@@ -20,8 +31,19 @@ export interface DecodedReference {
 
 export class BibleReferenceDecoder {
   private bookMappings: Map<number, BibleBookMapping> = new Map();
+  private logger: Logger;
+  private stats: ReferenceDecodingStats;
 
-  constructor() {
+  constructor(logger?: Logger) {
+    this.logger = logger || new Logger({ enableConsole: true, level: 1 });
+    this.stats = {
+      totalReferences: 0,
+      successfulDecodes: 0,
+      failedDecodes: 0,
+      unknownBooks: 0,
+      malformedReferences: 0,
+      errors: []
+    };
     this.initializeBookMappings();
   }
 
@@ -31,39 +53,208 @@ export class BibleReferenceDecoder {
    * Example output: "1 Peter 24:14" 
    */
   public decodeReference(reference: string, anchorBookId?: number): DecodedReference | null {
+    this.stats.totalReferences++;
+    
     try {
-      // Handle different reference formats
-      if (reference.includes('bible+')) {
-        return this.decodeBiblePlusReference(reference, anchorBookId);
-      } else if (reference.includes('.')) {
-        return this.decodeDottedReference(reference, anchorBookId);
-      } else {
-        return this.decodeSimpleReference(reference, anchorBookId);
+      // Validate input
+      if (!reference || typeof reference !== 'string') {
+        throw new ValidationError(
+          'Invalid reference input',
+          'reference',
+          reference,
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeReference',
+            userMessage: 'Reference must be a non-empty string',
+            suggestions: ['Check that the reference is properly formatted']
+          }
+        );
       }
+      
+      const trimmedRef = reference.trim();
+      if (!trimmedRef) {
+        throw new ValidationError(
+          'Empty reference after trimming',
+          'reference',
+          reference,
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeReference',
+            userMessage: 'Reference cannot be empty or whitespace only'
+          }
+        );
+      }
+      
+      this.logger.logDebug('Decoding reference', {
+        reference: trimmedRef,
+        anchorBookId,
+        hasAnchorBookId: anchorBookId !== undefined
+      }, 'BibleReferenceDecoder');
+      
+      let result: DecodedReference | null = null;
+      
+      // Handle different reference formats with specific error handling
+      if (trimmedRef.includes('bible+')) {
+        result = this.decodeBiblePlusReference(trimmedRef, anchorBookId);
+      } else if (trimmedRef.includes('.')) {
+        result = this.decodeDottedReference(trimmedRef, anchorBookId);
+      } else {
+        result = this.decodeSimpleReference(trimmedRef, anchorBookId);
+      }
+      
+      if (result) {
+        this.stats.successfulDecodes++;
+        this.logger.logDebug('Reference decoded successfully', {
+          original: trimmedRef,
+          formatted: result.formatted,
+          bookName: result.bookName
+        }, 'BibleReferenceDecoder');
+      } else {
+        this.stats.failedDecodes++;
+        this.logger.logWarn('Reference decoding returned null', {
+          reference: trimmedRef,
+          anchorBookId
+        }, 'BibleReferenceDecoder');
+      }
+      
+      return result;
+      
     } catch (error) {
-      console.warn(`Failed to decode reference: ${reference}`, error);
+      this.stats.failedDecodes++;
+      
+      const decodingError = error instanceof ValidationError 
+        ? error 
+        : new ValidationError(
+            `Failed to decode reference: ${reference}`,
+            'reference',
+            reference,
+            {
+              component: 'BibleReferenceDecoder',
+              operation: 'decodeReference',
+              userMessage: 'Could not decode Bible reference',
+              suggestions: [
+                'Check if the reference format is supported',
+                'Verify the reference contains valid book information'
+              ],
+              metadata: { anchorBookId }
+            },
+            error instanceof Error ? error : new Error(String(error))
+          );
+      
+      this.stats.errors.push(decodingError);
+      this.logger.logError(decodingError);
+      
       return null;
     }
   }
 
   /**
-   * Get book name from anchor book ID
+   * Get book name from anchor book ID with error handling
    */
   public getBookName(anchorBookId: number): string {
-    const mapping = this.bookMappings.get(anchorBookId);
-    return mapping ? mapping.englishName : `Unknown Book ${anchorBookId}`;
+    try {
+      if (typeof anchorBookId !== 'number' || !Number.isInteger(anchorBookId)) {
+        this.logger.logWarn('Invalid anchor book ID provided', {
+          anchorBookId,
+          type: typeof anchorBookId
+        }, 'BibleReferenceDecoder');
+        return `Invalid Book ID ${anchorBookId}`;
+      }
+      
+      const mapping = this.bookMappings.get(anchorBookId);
+      if (mapping) {
+        return mapping.englishName;
+      } else {
+        this.stats.unknownBooks++;
+        this.logger.logWarn('Unknown book ID encountered', {
+          anchorBookId,
+          availableBookIds: Array.from(this.bookMappings.keys()).slice(0, 10)
+        }, 'BibleReferenceDecoder');
+        return `Unknown Book ${anchorBookId}`;
+      }
+    } catch (error) {
+      this.logger.logError(new ValidationError(
+        `Failed to get book name for ID ${anchorBookId}`,
+        'anchorBookId',
+        anchorBookId,
+        {
+          component: 'BibleReferenceDecoder',
+          operation: 'getBookName'
+        },
+        error instanceof Error ? error : new Error(String(error))
+      ));
+      return `Error: Book ${anchorBookId}`;
+    }
   }
 
   /**
-   * Decode Logos "bible+version.book.chapter.verse" format
+   * Decode Logos "bible+version.book.chapter.verse" format with error handling
    */
   private decodeBiblePlusReference(reference: string, anchorBookId?: number): DecodedReference | null {
-    // Pattern: bible+nkjv.61.24.14 or bible+esv.1.1.1-1.1.31
-    const match = reference.match(/bible\+([^.]+)\.(\d+)\.(\d+)\.(\d+)(?:-(\d+)\.(\d+)\.(\d+))?/);
-    if (!match) return null;
+    try {
+      // Validate input
+      if (!reference || typeof reference !== 'string') {
+        throw new ValidationError(
+          'Invalid reference input for bible+ format',
+          'reference',
+          reference,
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeBiblePlusReference',
+            userMessage: 'Reference must be a non-empty string'
+          }
+        );
+      }
 
-    const [, , bookNum, chapter, verse, , endChapter, endVerse] = match;
-    const bookId = parseInt(bookNum || '0');
+      this.logger.logDebug('Decoding bible+ reference', {
+        reference,
+        anchorBookId
+      }, 'BibleReferenceDecoder');
+
+      // Pattern: bible+nkjv.61.24.14 or bible+esv.1.1.1-1.1.31
+      const match = reference.match(/bible\+([^.]+)\.(\d+)\.(\d+)\.(\d+)(?:-(\d+)\.(\d+)\.(\d+))?/);
+      if (!match) {
+        this.stats.malformedReferences++;
+        this.logger.logWarn('Bible+ reference format not recognized', {
+          reference,
+          expectedFormat: 'bible+version.book.chapter.verse',
+          receivedFormat: 'unrecognized'
+        }, 'BibleReferenceDecoder');
+        return null;
+      }
+
+    const [, version, bookNum, chapter, verse, , endChapter, endVerse] = match;
+    
+    // Validate extracted components
+    if (!bookNum || !chapter || !verse) {
+      throw new ValidationError(
+        'Missing required components in bible+ reference',
+        'reference',
+        reference,
+        {
+          component: 'BibleReferenceDecoder',
+          operation: 'decodeBiblePlusReference',
+          userMessage: 'Bible reference must include book, chapter, and verse numbers',
+          metadata: { version, bookNum, chapter, verse }
+        }
+      );
+    }
+
+    const bookId = parseInt(bookNum);
+    if (isNaN(bookId) || bookId <= 0) {
+      throw new ValidationError(
+        'Invalid book number in bible+ reference',
+        'bookNum',
+        bookNum,
+        {
+          component: 'BibleReferenceDecoder',
+          operation: 'decodeBiblePlusReference',
+          userMessage: 'Book number must be a positive integer',
+          metadata: { reference, version }
+        }
+      );
+    }
+
     const bookName = this.getBookName(anchorBookId || bookId);
     
     // Check if this is a single-chapter book
@@ -99,47 +290,249 @@ export class BibleReferenceDecoder {
       result.endVerse = parseInt(endVerse || '0');
     }
 
+    this.logger.logDebug('Bible+ reference decoded successfully', {
+      original: reference,
+      formatted: result.formatted,
+      bookName: result.bookName,
+      version
+    }, 'BibleReferenceDecoder');
+
     return result;
+
+    } catch (error) {
+      this.stats.malformedReferences++;
+      const conversionError = error instanceof ValidationError 
+        ? error 
+        : new ValidationError(
+            `Failed to decode bible+ reference: ${reference}`,
+            'reference',
+            reference,
+            {
+              component: 'BibleReferenceDecoder',
+              operation: 'decodeBiblePlusReference',
+              userMessage: 'Could not decode Bible+ reference format',
+              suggestions: [
+                'Check if the reference follows bible+version.book.chapter.verse format',
+                'Verify the book number is valid',
+                'Check that chapter and verse numbers are numeric'
+              ],
+              metadata: { anchorBookId }
+            },
+            error instanceof Error ? error : new Error(String(error))
+          );
+      
+      this.stats.errors.push(conversionError);
+      this.logger.logError(conversionError);
+      return null;
+    }
   }
 
   /**
    * Decode simple dotted reference format
    */
   private decodeDottedReference(reference: string, anchorBookId?: number): DecodedReference | null {
-    // Pattern: 61.24.14 or 1.1.1-31
-    const parts = reference.split('.');
-    if (parts.length < 2) return null;
+    try {
+      // Validate input
+      if (!reference || typeof reference !== 'string') {
+        throw new ValidationError(
+          'Invalid reference input for dotted format',
+          'reference',
+          reference,
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeDottedReference',
+            userMessage: 'Reference must be a non-empty string'
+          }
+        );
+      }
 
-    const bookId = anchorBookId || parseInt(parts[0] || '0');
-    const chapter = parseInt(parts[1] || '0');
-    const verse = parts[2] ? parseInt(parts[2] || '0') : undefined;
-    
-    const bookName = this.getBookName(bookId);
+      this.logger.logDebug('Decoding dotted reference', {
+        reference,
+        anchorBookId
+      }, 'BibleReferenceDecoder');
 
-    return {
-      bookName,
-      chapter,
-      verse,
-      reference,
-      anchorBookId: bookId,
-      formatted: this.formatReference(bookName, chapter, verse)
-    };
+      // Pattern: 61.24.14 or 1.1.1-31
+      const parts = reference.split('.');
+      if (parts.length < 2) {
+        this.stats.malformedReferences++;
+        this.logger.logWarn('Dotted reference has insufficient parts', {
+          reference,
+          parts: parts.length,
+          minimumRequired: 2,
+          expectedFormat: 'book.chapter[.verse]'
+        }, 'BibleReferenceDecoder');
+        return null;
+      }
+
+      // Validate numeric components
+      const bookId = anchorBookId || parseInt(parts[0] || '0');
+      const chapter = parseInt(parts[1] || '0');
+      const verse = parts[2] ? parseInt(parts[2] || '0') : undefined;
+
+      if (isNaN(chapter) || chapter <= 0) {
+        throw new ValidationError(
+          'Invalid chapter number in dotted reference',
+          'chapter',
+          parts[1],
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeDottedReference',
+            userMessage: 'Chapter number must be a positive integer',
+            metadata: { reference, bookId }
+          }
+        );
+      }
+
+      if (parts[2] && (isNaN(verse!) || verse! <= 0)) {
+        throw new ValidationError(
+          'Invalid verse number in dotted reference',
+          'verse',
+          parts[2],
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeDottedReference',
+            userMessage: 'Verse number must be a positive integer',
+            metadata: { reference, bookId, chapter }
+          }
+        );
+      }
+      
+      const bookName = this.getBookName(bookId);
+
+      const result: DecodedReference = {
+        bookName,
+        chapter,
+        verse,
+        reference,
+        anchorBookId: bookId,
+        formatted: this.formatReference(bookName, chapter, verse)
+      };
+
+      this.logger.logDebug('Dotted reference decoded successfully', {
+        original: reference,
+        formatted: result.formatted,
+        bookName: result.bookName
+      }, 'BibleReferenceDecoder');
+
+      return result;
+
+    } catch (error) {
+      this.stats.malformedReferences++;
+      const conversionError = error instanceof ValidationError 
+        ? error 
+        : new ValidationError(
+            `Failed to decode dotted reference: ${reference}`,
+            'reference',
+            reference,
+            {
+              component: 'BibleReferenceDecoder',
+              operation: 'decodeDottedReference',
+              userMessage: 'Could not decode dotted reference format',
+              suggestions: [
+                'Check if the reference follows book.chapter.verse format',
+                'Verify all numeric components are valid',
+                'Ensure at least book and chapter are provided'
+              ],
+              metadata: { anchorBookId }
+            },
+            error instanceof Error ? error : new Error(String(error))
+          );
+      
+      this.stats.errors.push(conversionError);
+      this.logger.logError(conversionError);
+      return null;
+    }
   }
 
   /**
    * Decode simple reference (fallback)
    */
   private decodeSimpleReference(reference: string, anchorBookId?: number): DecodedReference | null {
-    if (!anchorBookId) return null;
+    try {
+      // Validate input
+      if (!reference || typeof reference !== 'string') {
+        throw new ValidationError(
+          'Invalid reference input for simple format',
+          'reference',
+          reference,
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeSimpleReference',
+            userMessage: 'Reference must be a non-empty string'
+          }
+        );
+      }
 
-    const bookName = this.getBookName(anchorBookId);
-    
-    return {
-      bookName,
-      reference,
-      anchorBookId,
-      formatted: `${bookName} (${reference})`
-    };
+      if (!anchorBookId) {
+        this.stats.failedDecodes++;
+        this.logger.logWarn('Simple reference requires anchor book ID', {
+          reference,
+          anchorBookId
+        }, 'BibleReferenceDecoder');
+        return null;
+      }
+
+      if (typeof anchorBookId !== 'number' || !Number.isInteger(anchorBookId)) {
+        throw new ValidationError(
+          'Invalid anchor book ID for simple reference',
+          'anchorBookId',
+          anchorBookId,
+          {
+            component: 'BibleReferenceDecoder',
+            operation: 'decodeSimpleReference',
+            userMessage: 'Anchor book ID must be a valid integer',
+            metadata: { reference }
+          }
+        );
+      }
+
+      this.logger.logDebug('Decoding simple reference', {
+        reference,
+        anchorBookId
+      }, 'BibleReferenceDecoder');
+
+      const bookName = this.getBookName(anchorBookId);
+      
+      const result: DecodedReference = {
+        bookName,
+        reference,
+        anchorBookId,
+        formatted: `${bookName} (${reference})`
+      };
+
+      this.logger.logDebug('Simple reference decoded successfully', {
+        original: reference,
+        formatted: result.formatted,
+        bookName: result.bookName
+      }, 'BibleReferenceDecoder');
+
+      return result;
+
+    } catch (error) {
+      this.stats.failedDecodes++;
+      const conversionError = error instanceof ValidationError 
+        ? error 
+        : new ValidationError(
+            `Failed to decode simple reference: ${reference}`,
+            'reference',
+            reference,
+            {
+              component: 'BibleReferenceDecoder',
+              operation: 'decodeSimpleReference',
+              userMessage: 'Could not decode simple reference format',
+              suggestions: [
+                'Ensure an anchor book ID is provided',
+                'Verify the reference string is valid'
+              ],
+              metadata: { anchorBookId }
+            },
+            error instanceof Error ? error : new Error(String(error))
+          );
+      
+      this.stats.errors.push(conversionError);
+      this.logger.logError(conversionError);
+      return null;
+    }
   }
 
   /**

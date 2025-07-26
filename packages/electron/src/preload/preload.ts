@@ -52,6 +52,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('output-log', (_, message) => callback(message));
     return () => ipcRenderer.removeAllListeners('output-log');
   },
+
+  onStructuredError: (callback: MainToRenderer['structured-error']) => {
+    ipcRenderer.on('structured-error', (_, error) => callback(error));
+    return () => ipcRenderer.removeAllListeners('structured-error');
+  },
 });
 
 // Type definition for the exposed API
@@ -84,6 +89,7 @@ declare global {
       onSettingsLoaded: (callback: MainToRenderer['settings-loaded']) => () => void;
       onDatabaseDetected: (callback: MainToRenderer['database-detected']) => () => void;
       onOutputLog: (callback: MainToRenderer['output-log']) => () => void;
+      onStructuredError: (callback: MainToRenderer['structured-error']) => () => void;
     };
   }
 }

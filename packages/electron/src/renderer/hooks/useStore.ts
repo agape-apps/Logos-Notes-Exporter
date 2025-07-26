@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { AppState, ExportSettings, AppMode, ExportProgress, ExportResult } from '../types';
+import type { AppState, ExportSettings, AppMode, ExportProgress, ExportResult, StructuredError } from '../types';
 
 interface AppStore extends AppState {
   // Actions for updating state
@@ -20,12 +20,19 @@ interface AppStore extends AppState {
   addLogMessage: (message: string) => void;
   clearLog: () => void;
   
+  // Error handling actions
+  setCurrentError: (error: StructuredError) => void;
+  clearCurrentError: () => void;
+  addErrorToHistory: (error: StructuredError) => void;
+  clearErrorHistory: () => void;
+  setShowErrorDetails: (show: boolean) => void;
+  
   // UI state
   selectedDatabasePath: string | undefined;
   setSelectedDatabasePath: (path: string | undefined) => void;
 }
 
-import { DEFAULT_SETTINGS } from '../types';
+import { DEFAULT_SETTINGS, DEFAULT_APP_STATE } from '../types';
 
 export const useStore = create<AppStore>()(
   subscribeWithSelector((set, _get) => ({
@@ -37,6 +44,7 @@ export const useStore = create<AppStore>()(
     exportMessage: "Ready to export...",
     outputPath: undefined as string | undefined,
     lastExportSuccess: false,
+    errorState: DEFAULT_APP_STATE.errorState,
     logMessages: [],
     selectedDatabasePath: undefined as string | undefined,
 
@@ -86,6 +94,47 @@ export const useStore = create<AppStore>()(
 
     clearLog: () => set({ logMessages: [] }),
 
+    // Error handling actions
+    setCurrentError: (error) =>
+      set((state) => ({
+        errorState: {
+          ...state.errorState,
+          currentError: error,
+        },
+      })),
+
+    clearCurrentError: () =>
+      set((state) => ({
+        errorState: {
+          ...state.errorState,
+          currentError: undefined,
+        },
+      })),
+
+    addErrorToHistory: (error) =>
+      set((state) => ({
+        errorState: {
+          ...state.errorState,
+          errorHistory: [...state.errorState.errorHistory, error],
+        },
+      })),
+
+    clearErrorHistory: () =>
+      set((state) => ({
+        errorState: {
+          ...state.errorState,
+          errorHistory: [],
+        },
+      })),
+
+    setShowErrorDetails: (show) =>
+      set((state) => ({
+        errorState: {
+          ...state.errorState,
+          showErrorDetails: show,
+        },
+      })),
+
     // UI state
     setSelectedDatabasePath: (path) => set({ selectedDatabasePath: path }),
   }))
@@ -102,6 +151,7 @@ export const useExportState = () => useStore((state) => ({
   outputPath: state.outputPath,
 }));
 export const useLogMessages = () => useStore((state) => state.logMessages);
+export const useErrorState = () => useStore((state) => state.errorState);
 
 // Actions selectors
 export const useAppActions = () => useStore((state) => ({
@@ -116,4 +166,13 @@ export const useAppActions = () => useStore((state) => ({
   addLogMessage: state.addLogMessage,
   clearLog: state.clearLog,
   setSelectedDatabasePath: state.setSelectedDatabasePath,
-})); 
+}));
+
+// Error handling actions selector
+export const useErrorActions = () => useStore((state) => ({
+  setCurrentError: state.setCurrentError,
+  clearCurrentError: state.clearCurrentError,
+  addErrorToHistory: state.addErrorToHistory,
+  clearErrorHistory: state.clearErrorHistory,
+  setShowErrorDetails: state.setShowErrorDetails,
+}));

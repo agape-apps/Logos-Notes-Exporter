@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'fs/promises';
 import { join, extname } from 'path';
 import { existsSync } from 'fs';
+import { NetworkError, FileSystemError, ValidationError, Logger } from './errors/index.js';
 
 // XamlElement interface - copied from main converter for type safety
 interface XamlElement {
@@ -63,11 +64,15 @@ export interface ImageProcessingFailure {
   /** Note filename where the image was found */
   noteFilename: string;
   /** Type of failure */
-  failureType: 'validation' | 'metadata' | 'download' | 'exception';
+  failureType: 'validation' | 'metadata' | 'download' | 'exception' | 'filesystem' | 'network';
   /** Detailed error message */
   errorMessage: string;
   /** URL preview (first 80 characters) */
   urlPreview: string;
+  /** Associated error object for detailed debugging */
+  error?: NetworkError | FileSystemError | ValidationError;
+  /** Recovery strategy used */
+  recovery?: 'placeholder' | 'skip' | 'retry';
 }
 
 const DEFAULT_IMAGE_OPTIONS: Partial<ImageProcessingOptions> = {
@@ -87,9 +92,11 @@ export class XamlImageProcessor {
   private stats: ImageStats;
   private imageCounter: number = 0;
   private failures: ImageProcessingFailure[] = [];
+  private logger: Logger;
 
-  constructor(options: ImageProcessingOptions) {
+  constructor(options: ImageProcessingOptions, logger?: Logger) {
     this.options = { ...DEFAULT_IMAGE_OPTIONS, ...options } as ImageProcessingOptions;
+    this.logger = logger || new Logger({ enableConsole: true, level: 1 });
     this.stats = {
       imagesFound: 0,
       imagesDownloaded: 0,
@@ -108,16 +115,123 @@ export class XamlImageProcessor {
   }
 
   /**
-   * Record a failure with detailed information
+   * Record a failure with detailed information and structured error
    */
-  private recordFailure(originalUrl: string, failureType: ImageProcessingFailure['failureType'], errorMessage: string): void {
-    this.failures.push({
+  private recordFailure(
+    originalUrl: string,
+    failureType: ImageProcessingFailure['failureType'],
+    errorMessage: string,
+    error?: Error,
+    recovery: ImageProcessingFailure['recovery'] = 'placeholder'
+  ): void {
+    let structuredError: NetworkError | FileSystemError | ValidationError | undefined;
+    
+    // Create appropriate structured error based on failure type
+    switch (failureType) {
+      case 'network':
+      case 'download':
+      case 'metadata':
+        structuredError = new NetworkError(
+          errorMessage,
+          originalUrl,
+          undefined, // statusCode
+          {
+            component: 'XamlImageProcessor',
+            operation: failureType,
+            userMessage: 'Failed to download image from URL',
+            suggestions: [
+              'Check your internet connection',
+              'Verify the image URL is accessible',
+              'Try again later as the server may be temporarily unavailable'
+            ],
+            metadata: {
+              noteFilename: this.options.noteFilename,
+              recovery
+            }
+          },
+          error
+        );
+        break;
+        
+      case 'validation':
+        structuredError = new ValidationError(
+          errorMessage,
+          'imageUrl',
+          originalUrl,
+          {
+            component: 'XamlImageProcessor',
+            operation: 'urlValidation',
+            userMessage: 'Image URL is not valid or supported',
+            suggestions: [
+              'Ensure the URL points to a supported image format',
+              'Check that the URL uses HTTPS protocol',
+              'Verify the image comes from an allowed domain'
+            ],
+            metadata: {
+              noteFilename: this.options.noteFilename,
+              recovery
+            }
+          },
+          error
+        );
+        break;
+        
+      case 'filesystem':
+        structuredError = new FileSystemError(
+          errorMessage,
+          join(this.options.outputDirectory, 'images'),
+          'write',
+          {
+            component: 'XamlImageProcessor',
+            operation: 'saveImage',
+            userMessage: 'Failed to save image to local filesystem',
+            suggestions: [
+              'Check available disk space',
+              'Verify write permissions to the output directory',
+              'Ensure the output path is valid'
+            ],
+            metadata: {
+              noteFilename: this.options.noteFilename,
+              imageUrl: originalUrl,
+              recovery
+            }
+          },
+          error
+        );
+        break;
+        
+      default:
+        // Generic error for exception type
+        structuredError = new NetworkError(
+          errorMessage,
+          originalUrl,
+          undefined, // statusCode
+          {
+            component: 'XamlImageProcessor',
+            operation: 'processImage',
+            userMessage: 'Unexpected error occurred while processing image',
+            metadata: {
+              noteFilename: this.options.noteFilename,
+              failureType,
+              recovery
+            }
+          },
+          error
+        );
+    }
+    
+    const failure: ImageProcessingFailure = {
       originalUrl,
       noteFilename: this.options.noteFilename,
       failureType,
       errorMessage,
-      urlPreview: originalUrl.substring(0, 80) + (originalUrl.length > 80 ? '...' : '')
-    });
+      urlPreview: originalUrl.substring(0, 80) + (originalUrl.length > 80 ? '...' : ''),
+      error: structuredError,
+      recovery
+    };
+    
+    this.failures.push(failure);
+    this.logger.logError(structuredError);
   }
 
   /**
@@ -153,9 +267,15 @@ export class XamlImageProcessor {
   }
 
   /**
-   * Process a single image URL
+   * Process a single image URL with comprehensive error handling
    */
   private async processImage(originalUrl: string): Promise<ImageProcessingResult> {
+    this.logger.logDebug('Processing image URL', {
+      originalUrl: originalUrl.substring(0, 100),
+      noteFilename: this.options.noteFilename,
+      maxSizeMB: this.options.maxImageSizeMB
+    }, 'XamlImageProcessor');
+    
     this.log(`      🖼️  Processing image: ${originalUrl.substring(0, 80)}${originalUrl.length > 80 ? '...' : ''}`);
     
     try {
@@ -168,7 +288,7 @@ export class XamlImageProcessor {
         const error = 'Unsupported image format or invalid URL';
         this.log(`         ❌ Validation failed: ${error}`);
         this.stats.imageDownloadsFailed++;
-        this.recordFailure(originalUrl, 'validation', error);
+        this.recordFailure(originalUrl, 'validation', error, undefined, 'placeholder');
         return this.createFailureResult(originalUrl, error);
       }
       this.log(`         ✅ URL validation passed`);
@@ -180,7 +300,7 @@ export class XamlImageProcessor {
         const error = metadata.error || 'Failed to get image metadata';
         this.log(`         ❌ Metadata retrieval failed: ${error}`);
         this.stats.imageDownloadsFailed++;
-        this.recordFailure(originalUrl, 'metadata', error);
+        this.recordFailure(originalUrl, 'network', error, undefined, 'placeholder');
         return this.createFailureResult(originalUrl, error);
       }
       this.log(`         ✅ Metadata retrieved: ${metadata.filename || 'image.jpg'}`);
@@ -192,7 +312,15 @@ export class XamlImageProcessor {
       this.log(`         📁 Local filename: ${localFilename}`);
 
       // Ensure images directory exists
-      await this.ensureImagesDirectory(imagesDir);
+      try {
+        await this.ensureImagesDirectory(imagesDir);
+      } catch (error) {
+        const errorMessage = `Failed to create images directory: ${error instanceof Error ? error.message : String(error)}`;
+        this.log(`         ❌ Directory creation failed: ${errorMessage}`);
+        this.stats.imageDownloadsFailed++;
+        this.recordFailure(originalUrl, 'filesystem', errorMessage, error instanceof Error ? error : new Error(String(error)), 'placeholder');
+        return this.createFailureResult(originalUrl, errorMessage);
+      }
 
       // Check if file already exists (downloaded by previous note)
       if (existsSync(localPath)) {
@@ -233,7 +361,7 @@ export class XamlImageProcessor {
         this.stats.imageDownloadsFailed++;
         const error = downloadResult.error || 'Download failed';
         this.log(`         ❌ Download failed: ${error}`);
-        this.recordFailure(originalUrl, 'download', error);
+        this.recordFailure(originalUrl, 'network', error, undefined, 'placeholder');
         return this.createFailureResult(originalUrl, error);
       }
 
@@ -241,7 +369,29 @@ export class XamlImageProcessor {
       this.stats.imageDownloadsFailed++;
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.log(`         ❌ Processing failed with exception: ${errorMessage}`);
-      this.recordFailure(originalUrl, 'exception', errorMessage);
+      this.recordFailure(originalUrl, 'exception', errorMessage, error instanceof Error ? error : new Error(String(error)), 'placeholder');
+      
+      this.logger.logError(new NetworkError(
+        `Unexpected error processing image: ${errorMessage}`,
+        originalUrl,
+        undefined, // statusCode
+        {
+          component: 'XamlImageProcessor',
+          operation: 'processImage',
+          userMessage: 'An unexpected error occurred while processing the image',
+          suggestions: [
+            'Check the image URL for validity',
+            'Verify network connectivity',
+            'Try processing the note again'
+          ],
+          metadata: {
+            noteFilename: this.options.noteFilename,
+            cleanUrl: this.transformUrl(originalUrl)
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      ));
+      
       return this.createFailureResult(originalUrl, errorMessage);
     }
   }
@@ -510,11 +660,45 @@ export class XamlImageProcessor {
   }
 
   /**
-   * Ensure images directory exists
+   * Ensure images directory exists with error handling
    */
   private async ensureImagesDirectory(imagesDir: string): Promise<void> {
-    if (!existsSync(imagesDir)) {
-      await mkdir(imagesDir, { recursive: true });
+    try {
+      if (!existsSync(imagesDir)) {
+        this.logger.logDebug('Creating images directory', {
+          path: imagesDir
+        }, 'XamlImageProcessor');
+        
+        await mkdir(imagesDir, { recursive: true });
+        
+        this.logger.logDebug('Images directory created successfully', {
+          path: imagesDir
+        }, 'XamlImageProcessor');
+      }
+    } catch (error) {
+      const fsError = new FileSystemError(
+        `Failed to create images directory: ${error instanceof Error ? error.message : String(error)}`,
+        imagesDir,
+        'write',
+        {
+          component: 'XamlImageProcessor',
+          operation: 'ensureImagesDirectory',
+          userMessage: 'Could not create the images directory for storing downloaded images',
+          suggestions: [
+            'Check that you have write permissions to the output directory',
+            'Verify there is sufficient disk space available',
+            'Ensure the output path is valid and accessible'
+          ],
+          metadata: {
+            outputDirectory: this.options.outputDirectory,
+            noteFilename: this.options.noteFilename
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+      
+      this.logger.logError(fsError);
+      throw fsError;
     }
   }
 
@@ -559,10 +743,105 @@ export class XamlImageProcessor {
   }
 
   /**
-   * Get detailed failure information
+   * Get detailed failure information with error analysis
    */
   public getFailures(): ImageProcessingFailure[] {
     return [...this.failures];
+  }
+
+  /**
+   * Get failure summary for reporting
+   */
+  public getFailureSummary(): {
+    totalFailures: number;
+    validationFailures: number;
+    networkFailures: number;
+    filesystemFailures: number;
+    exceptionFailures: number;
+    mostCommonFailureType: string;
+    recoveriesApplied: number;
+  } {
+    const summary = {
+      totalFailures: this.failures.length,
+      validationFailures: 0,
+      networkFailures: 0,
+      filesystemFailures: 0,
+      exceptionFailures: 0,
+      mostCommonFailureType: 'none',
+      recoveriesApplied: 0
+    };
+
+    if (this.failures.length === 0) {
+      return summary;
+    }
+
+    // Count failure types
+    const typeCounts: Record<string, number> = {};
+    this.failures.forEach(failure => {
+      const type = failure.failureType;
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+      
+      switch (type) {
+        case 'validation':
+          summary.validationFailures++;
+          break;
+        case 'network':
+        case 'download':
+        case 'metadata':
+          summary.networkFailures++;
+          break;
+        case 'filesystem':
+          summary.filesystemFailures++;
+          break;
+        case 'exception':
+          summary.exceptionFailures++;
+          break;
+      }
+      
+      if (failure.recovery) {
+        summary.recoveriesApplied++;
+      }
+    });
+
+    // Find most common failure type
+    const maxCount = Math.max(...Object.values(typeCounts));
+    summary.mostCommonFailureType = Object.keys(typeCounts).find(key => typeCounts[key] === maxCount) || 'none';
+
+    return summary;
+  }
+
+  /**
+   * Log comprehensive failure report
+   */
+  public logFailureReport(): void {
+    const summary = this.getFailureSummary();
+    
+    if (summary.totalFailures === 0) {
+      this.logger.logInfo('Image processing completed successfully with no failures', {
+        imagesProcessed: this.stats.imagesFound,
+        imagesDownloaded: this.stats.imagesDownloaded
+      }, 'XamlImageProcessor');
+      return;
+    }
+
+    this.logger.logWarn('Image processing completed with failures', {
+      ...summary,
+      successRate: `${((this.stats.imagesDownloaded / Math.max(this.stats.imagesFound, 1)) * 100).toFixed(1)}%`,
+      totalImageSizeMB: this.stats.totalImageSizeMB.toFixed(2)
+    }, 'XamlImageProcessor');
+    
+    // Log details of failures if in debug mode
+    if ((this.logger as any).config?.level <= 0) { // Debug level (LogLevel.DEBUG = 0)
+      this.failures.forEach((failure, index) => {
+        this.logger.logDebug(`Image failure ${index + 1}`, {
+          url: failure.urlPreview,
+          type: failure.failureType,
+          message: failure.errorMessage,
+          recovery: failure.recovery,
+          noteFilename: failure.noteFilename
+        }, 'XamlImageProcessor');
+      });
+    }
   }
 
   /**

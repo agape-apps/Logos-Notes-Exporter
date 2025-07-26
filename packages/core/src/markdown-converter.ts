@@ -1,11 +1,12 @@
 import { getDefaults } from '@logos-notes-exporter/config';
 import type { OrganizedNote, NotebookGroup, FilePathInfo } from './types.js';
-import { XamlToMarkdownConverter } from './xaml-converter.js';
+import { XamlToMarkdownConverter, type XamlConversionResult } from './xaml-converter.js';
 import { type ImageProcessingFailure } from './xaml-image-processor.js';
 import { cleanXamlText } from './unicode-cleaner.js';
 import { MetadataProcessor, type MetadataLookups, type MetadataOptions } from './metadata-processor.js';
 import type { NotesToolDatabase } from './notestool-database.js';
 import type { CatalogDatabase } from './catalog-database.js';
+import { XamlConversionError, ValidationError, Logger, ErrorSeverity } from './errors/index.js';
 
 export interface MarkdownOptions {
   /** Include YAML frontmatter */
@@ -28,6 +29,35 @@ export interface MarkdownOptions {
   htmlSubSuperscript: boolean;
   /** Use indents with non-breaking spaces instead of blockquotes */
   indentsNotQuotes: boolean;
+}
+
+export interface MarkdownConversionStats {
+  /** Total notes processed */
+  totalNotes: number;
+  /** Notes that contained Rich Text (XAML) content */
+  notesWithXaml: number;
+  /** Rich Text (XAML) notes successfully converted */
+  xamlConversionsSucceeded: number;
+  /** Rich Text (XAML) notes that failed conversion */
+  xamlConversionsFailed: number;
+  /** Notes with plain text only */
+  plainTextNotes: number;
+  /** Notes with empty content */
+  emptyNotes: number;
+  /** Total images found in XAML */
+  imagesFound: number;
+  /** Images successfully downloaded */
+  imagesDownloaded: number;
+  /** Images that failed to download */
+  imageDownloadsFailed: number;
+  /** Total size of downloaded images in MB */
+  totalImageSizeMB: number;
+  /** Conversion errors encountered */
+  conversionErrors: XamlConversionError[];
+  /** Notes with metadata processing errors */
+  metadataErrors: number;
+  /** Notes with frontmatter generation errors */
+  frontmatterErrors: number;
 }
 
 export interface XamlConversionStats {
@@ -56,9 +86,10 @@ export interface XamlConversionStats {
 export interface XamlConversionFailure {
   noteId: number;
   noteTitle: string;
-  failureType: 'empty_content' | 'exception';
+  failureType: 'empty_content' | 'exception' | 'metadata_error' | 'frontmatter_error';
   errorMessage?: string;
   xamlContentPreview: string;
+  recovery?: 'plain_text' | 'basic_frontmatter' | 'skipped';
 }
 
 export interface MarkdownResult {
@@ -80,15 +111,19 @@ export class MarkdownConverter {
   private options: MarkdownOptions;
   private xamlConverter: XamlToMarkdownConverter;
   private metadataProcessor?: MetadataProcessor;
+  private conversionStats: MarkdownConversionStats;
   private xamlStats: XamlConversionStats;
   private verbose: boolean;
   private xamlFailures: XamlConversionFailure[];
   private onLog?: (message: string) => void;
+  private logger: Logger;
 
-  constructor(options: Partial<MarkdownOptions> = {}, database?: NotesToolDatabase, verbose: boolean = false, catalogDb?: CatalogDatabase, onLog?: (message: string) => void) {
+  constructor(options: Partial<MarkdownOptions> = {}, database?: NotesToolDatabase, verbose: boolean = false, catalogDb?: CatalogDatabase, onLog?: (message: string) => void, logger?: Logger) {
     this.options = { ...DEFAULT_MARKDOWN_OPTIONS, ...options };
     this.verbose = verbose;
     this.onLog = onLog;
+    this.logger = logger || new Logger({ enableConsole: true, level: 1 });
+    
     this.xamlConverter = new XamlToMarkdownConverter({
       htmlSubSuperscript: this.options.htmlSubSuperscript,
       convertIndentsToQuotes: !this.options.indentsNotQuotes,
@@ -100,6 +135,24 @@ export class MarkdownConverter {
       verbose: this.verbose
     });
     this.xamlFailures = [];
+    
+    // Initialize conversion statistics
+    this.conversionStats = {
+      totalNotes: 0,
+      notesWithXaml: 0,
+      xamlConversionsSucceeded: 0,
+      xamlConversionsFailed: 0,
+      plainTextNotes: 0,
+      emptyNotes: 0,
+      imagesFound: 0,
+      imagesDownloaded: 0,
+      imageDownloadsFailed: 0,
+      totalImageSizeMB: 0,
+      conversionErrors: [],
+      metadataErrors: 0,
+      frontmatterErrors: 0
+    };
+    
     this.xamlStats = {
       totalNotes: 0,
       notesWithXaml: 0,
@@ -134,7 +187,11 @@ export class MarkdownConverter {
         
         this.metadataProcessor = new MetadataProcessor(metadataOptions, lookups, catalogDb);
       } catch (error) {
-        console.warn('Failed to initialize enhanced metadata processor:', error);
+        this.logger.logWarn('Failed to initialize enhanced metadata processor', {
+          error: error instanceof Error ? error.message : String(error),
+          hasDatabase: !!database,
+          hasCatalogDb: !!catalogDb
+        }, 'MarkdownConverter');
       }
     }
   }
@@ -161,6 +218,13 @@ export class MarkdownConverter {
    */
   public getXamlConversionStats(): XamlConversionStats {
     return { ...this.xamlStats };
+  }
+  
+  /**
+   * Get comprehensive markdown conversion statistics
+   */
+  public getMarkdownConversionStats(): MarkdownConversionStats {
+    return { ...this.conversionStats };
   }
 
   /**
@@ -197,26 +261,88 @@ export class MarkdownConverter {
   }
 
   /**
-   * Convert an organized note to markdown
+   * Convert an organized note to markdown with comprehensive error handling
    */
   public convertNote(note: OrganizedNote, group: NotebookGroup, fileInfo: FilePathInfo): MarkdownResult {
-    const frontmatter = this.generateFrontmatter(note, group, fileInfo);
-    const body = this.generateBody(note, group, fileInfo);
-    
-    let content = '';
-    if (this.options.includeFrontmatter && Object.keys(frontmatter).length > 0) {
-      content += this.serializeFrontmatter(frontmatter);
-      content += '\n---\n\n';
-    }
-    content += body;
+    try {
+      this.conversionStats.totalNotes++;
+      
+      this.logger.logDebug('Converting note to markdown', {
+        noteId: note.id,
+        noteTitle: note.formattedTitle || 'Untitled',
+        hasXaml: this.containsXamlContent(note.contentRichText || ''),
+        filename: fileInfo.filename
+      }, 'MarkdownConverter');
+      
+      // Generate frontmatter with error handling
+      const frontmatter = this.generateFrontmatterSafely(note, group, fileInfo);
+      
+      // Generate body content with error handling
+      const body = this.generateBodySafely(note, group, fileInfo);
+      
+      // Combine content
+      let content = '';
+      if (this.options.includeFrontmatter && Object.keys(frontmatter).length > 0) {
+        try {
+          content += this.serializeFrontmatter(frontmatter);
+          content += '\n---\n\n';
+        } catch (error) {
+          this.conversionStats.frontmatterErrors++;
+          this.logger.logWarn('Failed to serialize frontmatter', {
+            noteId: note.id,
+            error: error instanceof Error ? error.message : String(error)
+          }, 'MarkdownConverter');
+          
+          // Continue without frontmatter
+        }
+      }
+      content += body;
 
-    return {
-      content,
-      frontmatter,
-      body,
-      wordCount: this.countWords(body),
-      characterCount: body.length
-    };
+      const result = {
+        content,
+        frontmatter,
+        body,
+        wordCount: this.countWords(body),
+        characterCount: body.length
+      };
+      
+      this.logger.logDebug('Note conversion completed', {
+        noteId: note.id,
+        wordCount: result.wordCount,
+        characterCount: result.characterCount,
+        hasFrontmatter: Object.keys(frontmatter).length > 0
+      }, 'MarkdownConverter');
+      
+      return result;
+      
+    } catch (error) {
+      const conversionError = new XamlConversionError(
+        `Failed to convert note ${note.id} to markdown`,
+        note.contentRichText?.substring(0, 200),
+        {
+          component: 'MarkdownConverter',
+          operation: 'convertNote',
+          metadata: {
+            noteId: note.id,
+            noteTitle: note.formattedTitle,
+            filename: fileInfo.filename
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+      
+      this.conversionStats.conversionErrors.push(conversionError);
+      this.logger.logError(conversionError);
+      
+      // Return a minimal result rather than failing completely
+      return {
+        content: `# ${note.formattedTitle || 'Untitled Note'}\n\n*[Error: This note could not be converted properly.]*`,
+        frontmatter: { title: note.formattedTitle || 'Untitled Note' },
+        body: '*[Error: This note could not be converted properly.]*',
+        wordCount: 0,
+        characterCount: 0
+      };
+    }
   }
 
   /**
@@ -440,6 +566,54 @@ export class MarkdownConverter {
   }
 
   /**
+   * Generate frontmatter with error handling
+   */
+  private generateFrontmatterSafely(note: OrganizedNote, group: NotebookGroup, fileInfo: FilePathInfo): Record<string, unknown> {
+    try {
+      return this.generateFrontmatter(note, group, fileInfo);
+    } catch (error) {
+      this.conversionStats.frontmatterErrors++;
+      this.logger.logWarn('Failed to generate frontmatter, using basic fallback', {
+        noteId: note.id,
+        error: error instanceof Error ? error.message : String(error)
+      }, 'MarkdownConverter');
+      
+      // Return basic frontmatter as fallback
+      return {
+        title: note.formattedTitle || 'Untitled Note',
+        noteId: note.id,
+        created: note.createdDate
+      };
+    }
+  }
+  
+  /**
+   * Generate body content with error handling
+   */
+  private generateBodySafely(note: OrganizedNote, group: NotebookGroup, fileInfo?: FilePathInfo): string {
+    try {
+      return this.generateBody(note, group, fileInfo);
+    } catch (error) {
+      this.logger.logError(new XamlConversionError(
+        `Failed to generate body content for note ${note.id}`,
+        note.contentRichText?.substring(0, 200),
+        {
+          component: 'MarkdownConverter',
+          operation: 'generateBodySafely',
+          metadata: {
+            noteId: note.id,
+            noteTitle: note.formattedTitle
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      ));
+      
+      // Return a fallback body
+      return '*[Error: Could not generate note content.]*';
+    }
+  }
+
+  /**
    * Generate the body content of the markdown note
    */
   private generateBody(note: OrganizedNote, group: NotebookGroup, _fileInfo?: FilePathInfo): string {
@@ -447,6 +621,7 @@ export class MarkdownConverter {
 
     // Track this note in Rich Text (XAML) conversion statistics
     this.xamlStats.totalNotes++;
+    this.conversionStats.totalNotes++;
 
     // Add title as H1 if not including frontmatter
     if (!this.options.includeFrontmatter) {
@@ -472,35 +647,82 @@ export class MarkdownConverter {
         this.xamlStats.notesWithXaml++;
         
         try {
-          const convertedContent = this.xamlConverter.convertToMarkdown(note.contentRichText);
-          if (convertedContent.trim()) {
+          const conversionResult = this.xamlConverter.convertToMarkdownWithStats(note.contentRichText);
+          
+          if (conversionResult.success && conversionResult.markdown.trim()) {
             this.xamlStats.xamlConversionsSucceeded++;
-            sections.push(convertedContent.trim());
+            this.conversionStats.xamlConversionsSucceeded++;
+            sections.push(conversionResult.markdown.trim());
+            
+            // Log any warnings from conversion stats
+            if (conversionResult.stats.errors.length > 0) {
+              this.logger.logWarn('XAML conversion completed with errors', {
+                noteId: note.id,
+                errorCount: conversionResult.stats.errors.length,
+                failedElements: conversionResult.stats.failedElements
+              }, 'MarkdownConverter');
+            }
           } else {
             this.xamlStats.xamlConversionsFailed++;
+            this.conversionStats.xamlConversionsFailed++;
+            
+            const failure: XamlConversionFailure = {
+              noteId: note.id,
+              noteTitle: note.formattedTitle || 'Untitled',
+              failureType: 'empty_content',
+              xamlContentPreview: note.contentRichText.substring(0, 150),
+              recovery: 'plain_text'
+            };
+            
             if (this.verbose) {
-              this.xamlFailures.push({
-                noteId: note.id,
-                noteTitle: note.formattedTitle || 'Untitled',
-                failureType: 'empty_content',
-                xamlContentPreview: note.contentRichText.substring(0, 150)
-              });
+              this.xamlFailures.push(failure);
             }
-            sections.push('*[This note contains formatting that could not be converted.]*');
+            
+            // Try to extract content from conversion result errors
+            const errorContent = this.extractContentFromConversionErrors(conversionResult.stats.errors);
+            if (errorContent) {
+              sections.push(errorContent);
+              failure.recovery = 'plain_text';
+            } else {
+              sections.push('*[This note contains formatting that could not be converted.]*');
+              failure.recovery = 'skipped';
+            }
+            
+            this.conversionStats.conversionErrors.push(...conversionResult.stats.errors);
           }
         } catch (error) {
           this.xamlStats.xamlConversionsFailed++;
+          this.conversionStats.xamlConversionsFailed++;
+          
+          const conversionError = new XamlConversionError(
+            `XAML conversion failed for note ${note.id}`,
+            note.contentRichText.substring(0, 200),
+            {
+              component: 'MarkdownConverter',
+              operation: 'generateBody',
+              metadata: {
+                noteId: note.id,
+                noteTitle: note.formattedTitle
+              }
+            },
+            error instanceof Error ? error : new Error(String(error))
+          );
+          
+          this.conversionStats.conversionErrors.push(conversionError);
+          
           if (this.verbose) {
             this.xamlFailures.push({
               noteId: note.id,
               noteTitle: note.formattedTitle || 'Untitled',
               failureType: 'exception',
-              errorMessage: error instanceof Error ? error.message : String(error),
-              xamlContentPreview: note.contentRichText.substring(0, 150)
+              errorMessage: conversionError.message,
+              xamlContentPreview: note.contentRichText.substring(0, 150),
+              recovery: 'plain_text'
             });
           }
+          
           // If Rich Text (XAML) conversion fails, extract plain text as fallback
-          const plainText = this.extractPlainTextFromXaml(note.contentRichText);
+          const plainText = this.extractPlainTextFromXamlSafely(note.contentRichText);
           if (plainText.trim()) {
             sections.push(plainText.trim());
           } else {
@@ -874,4 +1096,43 @@ export class MarkdownConverter {
       averageWordCount: results.size > 0 ? Math.round(totalWords / results.size) : 0
     };
   }
-} 
+
+  /**
+   * Extract content from conversion errors
+   */
+  private extractContentFromConversionErrors(errors: XamlConversionError[]): string | null {
+    const extractedTexts: string[] = [];
+    
+    for (const error of errors) {
+      if (error.xamlSnippet) {
+        // Try to extract any text from the XAML snippet
+        const text = this.extractPlainTextFromXamlSafely(error.xamlSnippet);
+        if (text.trim()) {
+          extractedTexts.push(text.trim());
+        }
+      }
+    }
+    
+    return extractedTexts.length > 0 ? extractedTexts.join(' ') : null;
+  }
+  
+  /**
+   * Extract plain text from XAML with error handling
+   */
+  private extractPlainTextFromXamlSafely(xaml: string): string {
+    try {
+      return this.extractPlainTextFromXaml(xaml);
+    } catch (error) {
+      this.logger.logDebug('Failed to extract plain text from XAML', {
+        error: error instanceof Error ? error.message : String(error),
+        xamlLength: xaml.length
+      }, 'MarkdownConverter');
+      
+      // Very basic fallback - just remove XML tags
+      return xaml
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+}

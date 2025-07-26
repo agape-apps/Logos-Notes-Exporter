@@ -11,13 +11,29 @@ export { MetadataProcessor } from './metadata-processor.js';
 export { UnicodeCleaner } from './unicode-cleaner.js';
 export { ExportValidator } from './validator.js';
 export { DatabaseLocator } from './database-locator.js';
-export { 
-  LogosNotesExporter, 
-  type CoreExportOptions, 
-  type ExportCallbacks, 
-  type ExportResult, 
-  type ProgressCallback, 
-  type LogCallback 
+export {
+  LogosNotesExporter,
+  type CoreExportOptions,
+  type ExportCallbacks,
+  type ExportResult,
+  type ProgressCallback,
+  type LogCallback
 } from './exporter.js';
 
-export type * from './types.js'; 
+// Error handling exports
+export {
+  LogosExportError,
+  DatabaseError,
+  ValidationError,
+  FileSystemError,
+  NetworkError,
+  XamlConversionError,
+  ErrorSeverity,
+  ErrorCategory,
+  type ErrorContext
+} from './errors/error-types.js';
+
+export { Logger, LogLevel, type LogEntry, type LoggerConfig } from './errors/logger.js';
+export { ErrorHandler } from './errors/error-handler.js';
+
+export type * from './types.js';

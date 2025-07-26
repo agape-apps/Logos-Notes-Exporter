@@ -36,6 +36,7 @@ export interface AppState {
   exportMessage: string;
   outputPath?: string;
   lastExportSuccess: boolean;
+  errorState: ErrorDisplayState;
 }
 
 // Export Status Types
@@ -50,6 +51,20 @@ export interface ExportResult {
   error?: string;
 }
 
+// Enhanced Error Handling Types
+export interface StructuredError {
+  message: string;
+  suggestions: string[];
+  severity: 'info' | 'warn' | 'error' | 'fatal';
+  category: string;
+}
+
+export interface ErrorDisplayState {
+  currentError?: StructuredError;
+  errorHistory: StructuredError[];
+  showErrorDetails: boolean;
+}
+
 // IPC Communication Types
 
 // Main → Renderer Events
@@ -57,6 +72,7 @@ export interface MainToRenderer {
   "export-progress": (progress: ExportProgress) => void;
   "export-complete": (result: ExportResult) => void;
   "export-error": (error: string) => void;
+  "structured-error": (error: StructuredError) => void;
   "settings-loaded": (settings: ExportSettings) => void;
   "database-detected": (path: string) => void;
   "output-log": (message: string) => void;
@@ -139,4 +155,8 @@ export const DEFAULT_APP_STATE: AppState = {
   exportProgress: 0,
   exportMessage: "Ready to export...",
   lastExportSuccess: false,
-}; 
+  errorState: {
+    errorHistory: [],
+    showErrorDetails: false,
+  },
+};

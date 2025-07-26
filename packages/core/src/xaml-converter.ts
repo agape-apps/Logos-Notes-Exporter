@@ -3,6 +3,7 @@ import { getDefaults } from '@logos-notes-exporter/config';
 import { UnicodeCleaner } from './unicode-cleaner.js';
 import { XamlListProcessor } from './xaml-lists-processor.js';
 import { XamlImageProcessor, type ImageProcessingOptions, type ImageStats, type ImageProcessingFailure } from './xaml-image-processor.js';
+import { XamlConversionError, Logger, ErrorSeverity } from './errors/index.js';
 
 export interface XamlConverterOptions {
   /** Font sizes that correspond to heading levels [H1, H2, H3, H4, H5, H6] */
@@ -31,6 +32,32 @@ export interface XamlConverterOptions {
   onLog?: (message: string) => void;
   /** Whether to enable verbose logging */
   verbose?: boolean;
+}
+
+export interface XamlConversionStats {
+  /** Total elements processed */
+  totalElements: number;
+  /** Elements successfully converted */
+  successfulElements: number;
+  /** Elements that failed conversion */
+  failedElements: number;
+  /** Number of fallbacks to plain text */
+  plainTextFallbacks: number;
+  /** Number of unknown elements encountered */
+  unknownElements: number;
+  /** Image processing statistics */
+  imageStats?: ImageStats;
+  /** List of errors encountered */
+  errors: XamlConversionError[];
+}
+
+export interface XamlConversionResult {
+  /** Converted markdown content */
+  markdown: string;
+  /** Conversion statistics */
+  stats: XamlConversionStats;
+  /** Whether conversion was successful */
+  success: boolean;
 }
 
 // TODO: Add support for other monospace Font Names
@@ -62,9 +89,22 @@ export class XamlToMarkdownConverter {
   private listProcessor: XamlListProcessor;
   private imageProcessor?: XamlImageProcessor;
   private pendingImages: Map<string, string> = new Map(); // placeholder -> URL
+  private logger: Logger;
+  private conversionStats: XamlConversionStats;
 
-  constructor(options: Partial<XamlConverterOptions> = {}) {
+  constructor(options: Partial<XamlConverterOptions> = {}, logger?: Logger) {
+    this.logger = logger || new Logger({ enableConsole: true, level: 1 });
     this.options = { ...DEFAULT_OPTIONS, ...options };
+    
+    // Initialize conversion statistics
+    this.conversionStats = {
+      totalElements: 0,
+      successfulElements: 0,
+      failedElements: 0,
+      plainTextFallbacks: 0,
+      unknownElements: 0,
+      errors: []
+    };
     this.parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
@@ -100,37 +140,102 @@ export class XamlToMarkdownConverter {
   }
 
   public convertToMarkdown(xamlContent: string): string {
+    const result = this.convertToMarkdownWithStats(xamlContent);
+    return result.markdown;
+  }
+
+  public convertToMarkdownWithStats(xamlContent: string): XamlConversionResult {
+    // Initialize conversion statistics
+    this.conversionStats = {
+      totalElements: 0,
+      successfulElements: 0,
+      failedElements: 0,
+      plainTextFallbacks: 0,
+      unknownElements: 0,
+      errors: []
+    };
+
     try {
       if (!xamlContent || xamlContent.trim() === '') {
-        return '';
+        return {
+          markdown: '',
+          stats: this.conversionStats,
+          success: true
+        };
       }
+
+      this.logger.logDebug('Starting XAML conversion', {
+        contentLength: xamlContent.length,
+        contentPreview: xamlContent.substring(0, 100) + (xamlContent.length > 100 ? '...' : '')
+      }, 'XamlConverter');
 
       // Clean and prepare Rich Text (XAML) content
       const cleanedXaml = this.cleanXamlContent(xamlContent);
       if (!cleanedXaml.trim()) {
-        return '';
+        return {
+          markdown: '',
+          stats: this.conversionStats,
+          success: true
+        };
       }
+
+      // Validate XAML structure
+      this.validateXamlStructure(cleanedXaml);
 
       // Wrap in Root to handle multiple roots
       const wrappedXaml = `<Root>${cleanedXaml}</Root>`;
 
-      // Parse Rich Text (XAML) content
-      const parsed = this.parser.parse(wrappedXaml);
+      // Parse Rich Text (XAML) content with error handling
+      const parsed = this.parseXamlSafely(wrappedXaml, xamlContent);
       
-      // Convert to markdown
-      const markdown = this.processElement(parsed);
+      // Convert to markdown with detailed error tracking
+      const markdown = this.processElementWithErrorHandling(parsed);
       
       // Clean up and normalize
-      return this.normalizeMarkdown(markdown);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn(`XAML parsing failed: ${errorMessage}`);
-      if (this.options.ignoreUnknownElements) {
-        const fallbackResult = this.extractPlainText(xamlContent);
-        console.warn(`Falling back to plain text extraction. Result length: ${fallbackResult.length} chars`);
-        return '*[Warning: Some formatting lost due to complex content]*\n\n' + fallbackResult;
+      const normalizedMarkdown = this.normalizeMarkdown(markdown);
+      
+      // Add image statistics if available
+      if (this.imageProcessor) {
+        this.conversionStats.imageStats = this.imageProcessor.getStats();
       }
-      throw new Error(`Rich Text (XAML) conversion failed: ${error}`);
+
+      const success = this.conversionStats.failedElements === 0 && this.conversionStats.errors.length === 0;
+      
+      this.logger.logInfo('XAML conversion completed', {
+        success,
+        totalElements: this.conversionStats.totalElements,
+        failedElements: this.conversionStats.failedElements,
+        unknownElements: this.conversionStats.unknownElements,
+        resultLength: normalizedMarkdown.length
+      }, 'XamlConverter');
+      
+      return {
+        markdown: normalizedMarkdown,
+        stats: this.conversionStats,
+        success
+      };
+      
+    } catch (error) {
+      const conversionError = this.handleConversionError(error, xamlContent);
+      this.conversionStats.errors.push(conversionError);
+      
+      if (this.options.ignoreUnknownElements) {
+        const fallbackResult = this.extractPlainTextSafely(xamlContent);
+        this.conversionStats.plainTextFallbacks++;
+        
+        this.logger.logWarn('Fell back to plain text extraction', {
+          originalLength: xamlContent.length,
+          fallbackLength: fallbackResult.length
+        }, 'XamlConverter');
+        
+        return {
+          markdown: '*[Warning: Some formatting lost due to complex content]*\n\n' + fallbackResult,
+          stats: this.conversionStats,
+          success: false
+        };
+      }
+      
+      throw conversionError;
     }
   }
 
@@ -1177,5 +1282,249 @@ export class XamlToMarkdownConverter {
    */
   public getImageFailures(): ImageProcessingFailure[] {
     return this.imageProcessor ? this.imageProcessor.getFailures() : [];
+  }
+
+  /**
+   * Get conversion statistics
+   */
+  public getConversionStats(): XamlConversionStats {
+    return { ...this.conversionStats };
+  }
+
+  /**
+   * Validate XAML structure before processing
+   */
+  private validateXamlStructure(xamlContent: string): void {
+    try {
+      // Basic validation checks
+      if (xamlContent.length > 1024 * 1024) { // 1MB limit
+        this.logger.logWarn('Large XAML content detected', {
+          size: xamlContent.length,
+          sizeMB: (xamlContent.length / (1024 * 1024)).toFixed(2)
+        }, 'XamlConverter');
+      }
+
+      // Check for malformed XML patterns
+      const openTags = (xamlContent.match(/</g) || []).length;
+      const closeTags = (xamlContent.match(/>/g) || []).length;
+      
+      if (Math.abs(openTags - closeTags) > 10) { // Allow some tolerance
+        this.logger.logWarn('Potentially malformed XML detected', {
+          openTags,
+          closeTags,
+          difference: Math.abs(openTags - closeTags)
+        }, 'XamlConverter');
+      }
+
+      // Check for deeply nested structures
+      const maxDepth = this.estimateXmlDepth(xamlContent);
+      if (maxDepth > 50) {
+        this.logger.logWarn('Deeply nested XAML structure detected', {
+          estimatedDepth: maxDepth
+        }, 'XamlConverter');
+      }
+
+    } catch (error) {
+      this.logger.logDebug('XAML validation check failed', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'XamlConverter');
+    }
+  }
+
+  /**
+   * Parse XAML content with comprehensive error handling
+   */
+  private parseXamlSafely(wrappedXaml: string, originalXaml: string): any {
+    try {
+      return this.parser.parse(wrappedXaml);
+    } catch (error) {
+      const parseError = new XamlConversionError(
+        'Failed to parse XAML content',
+        originalXaml.substring(0, 200),
+        {
+          component: 'XamlConverter',
+          operation: 'parseXamlSafely',
+          metadata: {
+            originalLength: originalXaml.length,
+            wrappedLength: wrappedXaml.length,
+            parserError: error instanceof Error ? error.message : String(error)
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+      
+      this.logger.logError(parseError);
+      throw parseError;
+    }
+  }
+
+  /**
+   * Process elements with detailed error tracking
+   */
+  private processElementWithErrorHandling(element: any): string {
+    try {
+      this.conversionStats.totalElements++;
+      const result = this.processElement(element);
+      this.conversionStats.successfulElements++;
+      return result;
+    } catch (error) {
+      this.conversionStats.failedElements++;
+      
+      const elementError = new XamlConversionError(
+        'Failed to process XAML element',
+        this.getElementSnippet(element),
+        {
+          component: 'XamlConverter',
+          operation: 'processElementWithErrorHandling',
+          metadata: {
+            elementType: typeof element,
+            elementKeys: this.getElementKeys(element)
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+      
+      this.conversionStats.errors.push(elementError);
+      this.logger.logError(elementError);
+      
+      // Try to recover by extracting any text content
+      const fallbackText = this.extractElementText(element);
+      if (fallbackText) {
+        this.logger.logDebug('Recovered text from failed element', {
+          recoveredLength: fallbackText.length
+        }, 'XamlConverter');
+        return fallbackText;
+      }
+      
+      return ''; // Return empty string rather than failing entirely
+    }
+  }
+
+  /**
+   * Handle conversion errors with detailed context
+   */
+  private handleConversionError(error: unknown, originalXaml: string): XamlConversionError {
+    if (error instanceof XamlConversionError) {
+      return error;
+    }
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    return new XamlConversionError(
+      `XAML conversion failed: ${errorMessage}`,
+      originalXaml.substring(0, 300),
+      {
+        component: 'XamlConverter',
+        operation: 'convertToMarkdownWithStats',
+        metadata: {
+          originalLength: originalXaml.length,
+          conversionStats: this.conversionStats
+        }
+      },
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+
+  /**
+   * Extract plain text with error handling
+   */
+  private extractPlainTextSafely(xamlContent: string): string {
+    try {
+      return this.extractPlainText(xamlContent);
+    } catch (error) {
+      this.logger.logWarn('Failed to extract plain text, using basic cleanup', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'XamlConverter');
+      
+      // Very basic fallback - just remove XML tags
+      return xamlContent
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+
+  /**
+   * Estimate XML nesting depth for validation
+   */
+  private estimateXmlDepth(xmlContent: string): number {
+    let depth = 0;
+    let maxDepth = 0;
+    
+    for (let i = 0; i < xmlContent.length; i++) {
+      if (xmlContent[i] === '<') {
+        if (xmlContent[i + 1] === '/') {
+          depth--;
+        } else if (xmlContent[i + 1] !== '!' && xmlContent[i + 1] !== '?') {
+          depth++;
+          maxDepth = Math.max(maxDepth, depth);
+        }
+      }
+    }
+    
+    return maxDepth;
+  }
+
+  /**
+   * Get a snippet of an element for error reporting
+   */
+  private getElementSnippet(element: any): string {
+    try {
+      if (typeof element === 'string') {
+        return element.substring(0, 100);
+      }
+      
+      const elementStr = JSON.stringify(element);
+      return elementStr.substring(0, 200);
+    } catch {
+      return '[Unable to extract element snippet]';
+    }
+  }
+
+  /**
+   * Get element keys for error context
+   */
+  private getElementKeys(element: any): string[] {
+    try {
+      if (typeof element === 'object' && element !== null) {
+        return Object.keys(element);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Extract any available text from an element for recovery
+   */
+  private extractElementText(element: any): string {
+    try {
+      if (typeof element === 'string') {
+        return element;
+      }
+      
+      if (typeof element === 'object' && element !== null) {
+        // Look for common text properties
+        if (element['#text']) {
+          return String(element['#text']);
+        }
+        
+        if (element['@_Text']) {
+          return String(element['@_Text']);
+        }
+        
+        // Recursively search for text in nested elements
+        for (const value of Object.values(element)) {
+          if (typeof value === 'string' && value.trim()) {
+            return value.trim();
+          }
+        }
+      }
+      
+      return '';
+    } catch {
+      return '';
+    }
   }
 } 

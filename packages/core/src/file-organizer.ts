@@ -1,10 +1,11 @@
-import { mkdir, writeFile, readFile } from 'fs/promises';
+import { mkdir, writeFile, readFile, access, stat } from 'fs/promises';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, constants } from 'fs';
 import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
 import type { OrganizedNote, NotebookGroup, OrganizationStats } from './types.js';
 import { BibleReferenceDecoder } from './reference-decoder.js';
 import type { ResourceId } from './notestool-database.js';
+import { FileSystemError, Logger, ErrorSeverity } from './errors/index.js';
 
 export interface FilePathInfo {
   /** Full file path */
@@ -62,11 +63,14 @@ export class FileOrganizer {
   private createdDirs = new Set<string>();
   private bibleDecoder = new BibleReferenceDecoder();
   private resourceIdMap?: Map<number, ResourceId>;
+  private logger: Logger;
 
   constructor(
     options: Partial<FileStructureOptions> = {},
-    resourceIds?: ResourceId[]
+    resourceIds?: ResourceId[],
+    logger?: Logger
   ) {
+    this.logger = logger || new Logger({ enableConsole: true, level: 1 });
     this.options = { ...DEFAULT_FILE_OPTIONS, ...options };
 
     // Create resourceId lookup map if provided
@@ -155,24 +159,137 @@ export class FileOrganizer {
   }
 
   /**
-   * Ensure directory exists
+   * Ensure directory exists with comprehensive error handling
    */
   public async ensureDirectory(dirPath: string): Promise<void> {
-    if (!this.createdDirs.has(dirPath) && !existsSync(dirPath)) {
+    try {
+      // Check if we've already created this directory
+      if (this.createdDirs.has(dirPath)) {
+        return;
+      }
+
+      // Check if directory already exists
+      if (existsSync(dirPath)) {
+        // Verify it's actually a directory and we can write to it
+        await this.validateDirectoryAccess(dirPath);
+        this.createdDirs.add(dirPath);
+        return;
+      }
+
+      // Validate parent directory exists and is writable
+      await this.validateParentDirectory(dirPath);
+
+      // Create directory with proper error handling
+      this.logger.logDebug('Creating directory', { path: dirPath }, 'FileOrganizer');
       await mkdir(dirPath, { recursive: true });
+      
+      // Verify creation was successful
+      await this.validateDirectoryAccess(dirPath);
+      
       this.createdDirs.add(dirPath);
+      this.logger.logInfo('Directory created successfully', { path: dirPath }, 'FileOrganizer');
+      
+    } catch (error) {
+      if (error instanceof FileSystemError) {
+        throw error;
+      }
+      
+      const fsError = new FileSystemError(
+        `Failed to create directory: ${dirPath}`,
+        dirPath,
+        'ensureDirectory',
+        {
+          component: 'FileOrganizer',
+          operation: 'ensureDirectory',
+          metadata: { dirPath }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+      
+      this.logger.logError(fsError);
+      throw fsError;
     }
   }
 
   /**
-   * Write file with content
+   * Write file with content and comprehensive error handling
    */
   public async writeFile(
     fileInfo: FilePathInfo,
     content: string
   ): Promise<void> {
-    await this.ensureDirectory(fileInfo.directory);
-    await writeFile(fileInfo.fullPath, content, "utf-8");
+    try {
+      // Ensure directory exists first
+      await this.ensureDirectory(fileInfo.directory);
+      
+      // Validate file path
+      this.validateFilePath(fileInfo.fullPath);
+      
+      // Check if file already exists and handle accordingly
+      if (fileInfo.exists) {
+        this.logger.logWarn('Overwriting existing file', {
+          path: fileInfo.fullPath,
+          relativePath: fileInfo.relativePath
+        }, 'FileOrganizer');
+      }
+      
+      // Validate content
+      if (typeof content !== 'string') {
+        throw new FileSystemError(
+          'Content must be a string',
+          fileInfo.fullPath,
+          'writeFile',
+          {
+            component: 'FileOrganizer',
+            operation: 'writeFile',
+            metadata: { contentType: typeof content }
+          }
+        );
+      }
+      
+      // Check available disk space (rough estimate)
+      await this.checkDiskSpace(fileInfo.directory, content.length);
+      
+      this.logger.logDebug('Writing file', {
+        path: fileInfo.fullPath,
+        size: content.length
+      }, 'FileOrganizer');
+      
+      // Write file with error handling
+      await writeFile(fileInfo.fullPath, content, 'utf-8');
+      
+      // Verify file was written successfully
+      await this.validateFileWritten(fileInfo.fullPath, content.length);
+      
+      this.logger.logInfo('File written successfully', {
+        path: fileInfo.fullPath,
+        size: content.length
+      }, 'FileOrganizer');
+      
+    } catch (error) {
+      if (error instanceof FileSystemError) {
+        throw error;
+      }
+      
+      const fsError = new FileSystemError(
+        `Failed to write file: ${fileInfo.fullPath}`,
+        fileInfo.fullPath,
+        'writeFile',
+        {
+          component: 'FileOrganizer',
+          operation: 'writeFile',
+          metadata: {
+            fullPath: fileInfo.fullPath,
+            relativePath: fileInfo.relativePath,
+            contentSize: content.length
+          }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+      
+      this.logger.logError(fsError);
+      throw fsError;
+    }
   }
 
   /**
@@ -417,7 +534,11 @@ export class FileOrganizer {
         return content ? `*${content}*` : null;
       }
     } catch (error) {
-      console.warn(`Failed to read content for note ${note.id}:`, error);
+      this.logger.logWarn('Failed to read content for note', {
+        noteId: note.id,
+        notebookDir,
+        error: error instanceof Error ? error.message : String(error)
+      }, 'FileOrganizer');
     }
 
     return null;
@@ -451,10 +572,10 @@ export class FileOrganizer {
           return filename;
         } catch (error) {
           // Fall back to regular filename if Bible format fails
-          console.warn(
-            `Failed to generate Bible filename for note ${note.id}:`,
-            error
-          );
+          this.logger.logWarn('Failed to generate Bible filename', {
+            noteId: note.id,
+            error: error instanceof Error ? error.message : String(error)
+          }, 'FileOrganizer');
         }
       }
     }
@@ -477,10 +598,10 @@ export class FileOrganizer {
           return filename;
         }
       } catch (error) {
-        console.warn(
-          `Failed to generate resourceId filename for note ${note.id}:`,
-          error
-        );
+        this.logger.logWarn('Failed to generate resourceId filename', {
+          noteId: note.id,
+          error: error instanceof Error ? error.message : String(error)
+        }, 'FileOrganizer');
       }
     }
 
@@ -692,5 +813,247 @@ export class FileOrganizer {
    */
   public getOptions(): FileStructureOptions {
     return { ...this.options };
+  }
+
+  /**
+   * Validate directory access permissions
+   */
+  private async validateDirectoryAccess(dirPath: string): Promise<void> {
+    try {
+      await access(dirPath, constants.F_OK | constants.W_OK);
+      
+      const stats = await stat(dirPath);
+      if (!stats.isDirectory()) {
+        throw new FileSystemError(
+          `Path exists but is not a directory: ${dirPath}`,
+          dirPath,
+          'validateDirectoryAccess',
+          {
+            component: 'FileOrganizer',
+            operation: 'validateDirectoryAccess',
+            userMessage: 'A file exists where a directory is needed.',
+            suggestions: [
+              'Choose a different output location',
+              'Remove the conflicting file',
+              'Rename the existing file'
+            ],
+            metadata: { dirPath, isDirectory: stats.isDirectory() }
+          }
+        );
+      }
+    } catch (error) {
+      if (error instanceof FileSystemError) {
+        throw error;
+      }
+      
+      // Check specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('ENOENT')) {
+          throw new FileSystemError(
+            `Directory does not exist: ${dirPath}`,
+            dirPath,
+            'validateDirectoryAccess',
+            {
+              component: 'FileOrganizer',
+              operation: 'validateDirectoryAccess',
+              userMessage: 'Directory not found.',
+              suggestions: ['Create the directory first', 'Check the path is correct'],
+              metadata: { dirPath }
+            },
+            error
+          );
+        } else if (error.message.includes('EACCES') || error.message.includes('EPERM')) {
+          throw new FileSystemError(
+            `Permission denied accessing directory: ${dirPath}`,
+            dirPath,
+            'validateDirectoryAccess',
+            {
+              component: 'FileOrganizer',
+              operation: 'validateDirectoryAccess',
+              userMessage: 'Permission denied. Cannot write to this directory.',
+              suggestions: [
+                'Choose a different output location',
+                'Check folder permissions',
+                'Run with appropriate privileges'
+              ],
+              metadata: { dirPath }
+            },
+            error
+          );
+        }
+      }
+      
+      throw new FileSystemError(
+        `Failed to validate directory access: ${dirPath}`,
+        dirPath,
+        'validateDirectoryAccess',
+        {
+          component: 'FileOrganizer',
+          operation: 'validateDirectoryAccess',
+          metadata: { dirPath }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
+  /**
+   * Validate parent directory exists and is writable
+   */
+  private async validateParentDirectory(dirPath: string): Promise<void> {
+    const parentDir = join(dirPath, '..');
+    
+    try {
+      await this.validateDirectoryAccess(parentDir);
+    } catch (error) {
+      throw new FileSystemError(
+        `Parent directory is not accessible: ${parentDir}`,
+        dirPath,
+        'validateParentDirectory',
+        {
+          component: 'FileOrganizer',
+          operation: 'validateParentDirectory',
+          userMessage: 'Cannot create directory because parent directory is not accessible.',
+          suggestions: [
+            'Check if parent directories exist',
+            'Verify parent directory permissions',
+            'Choose a different output location'
+          ],
+          metadata: { dirPath, parentDir }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
+  /**
+   * Validate file path for potential issues
+   */
+  private validateFilePath(filePath: string): void {
+    // Check path length (Windows has 260 char limit, Unix typically 4096)
+    const maxPathLength = process.platform === 'win32' ? 260 : 4096;
+    if (filePath.length > maxPathLength) {
+      throw new FileSystemError(
+        `File path too long: ${filePath.length} characters (max: ${maxPathLength})`,
+        filePath,
+        'validateFilePath',
+        {
+          component: 'FileOrganizer',
+          operation: 'validateFilePath',
+          userMessage: 'File path is too long for this system.',
+          suggestions: [
+            'Use a shorter base directory path',
+            'Reduce maximum filename length setting',
+            'Enable flattened directory structure'
+          ],
+          metadata: { filePath, length: filePath.length, maxLength: maxPathLength }
+        }
+      );
+    }
+
+    // Check for invalid characters (additional platform-specific checks)
+    const invalidChars = process.platform === 'win32' 
+      ? /[<>:"|?*\x00-\x1f]/
+      : /[\x00]/;
+      
+    if (invalidChars.test(filePath)) {
+      throw new FileSystemError(
+        `File path contains invalid characters: ${filePath}`,
+        filePath,
+        'validateFilePath',
+        {
+          component: 'FileOrganizer',
+          operation: 'validateFilePath',
+          userMessage: 'File path contains characters not allowed by the file system.',
+          suggestions: [
+            'File paths are automatically sanitized',
+            'Check for null characters or control characters'
+          ],
+          metadata: { filePath, platform: process.platform }
+        }
+      );
+    }
+  }
+
+  /**
+   * Check available disk space (rough estimate)
+   */
+  private async checkDiskSpace(dirPath: string, contentSize: number): Promise<void> {
+    try {
+      // This is a basic check - in production you might use statvfs or similar
+      const stats = await stat(dirPath);
+      
+      // If we can stat the directory, assume we have some space
+      // A more robust implementation would check actual available space
+      const estimatedMinSpace = contentSize * 2; // Double the content size for safety
+      
+      if (estimatedMinSpace > 100 * 1024 * 1024) { // If > 100MB, warn
+        this.logger.logWarn('Large file being written', {
+          path: dirPath,
+          contentSize,
+          estimatedMinSpace
+        }, 'FileOrganizer');
+      }
+      
+    } catch (error) {
+      // If we can't check disk space, log but don't fail
+      this.logger.logDebug('Could not check disk space', {
+        dirPath,
+        error: error instanceof Error ? error.message : String(error)
+      }, 'FileOrganizer');
+    }
+  }
+
+  /**
+   * Verify file was written successfully
+   */
+  private async validateFileWritten(filePath: string, expectedSize: number): Promise<void> {
+    try {
+      const stats = await stat(filePath);
+      
+      if (!stats.isFile()) {
+        throw new FileSystemError(
+          `Written path is not a file: ${filePath}`,
+          filePath,
+          'validateFileWritten',
+          {
+            component: 'FileOrganizer',
+            operation: 'validateFileWritten',
+            metadata: { filePath, expectedSize }
+          }
+        );
+      }
+      
+      // Check if file size is reasonable (within 10% of expected)
+      const actualSize = stats.size;
+      const sizeDifference = Math.abs(actualSize - expectedSize);
+      const allowedDifference = expectedSize * 0.1; // 10% tolerance
+      
+      if (sizeDifference > allowedDifference && expectedSize > 1000) {
+        this.logger.logWarn('File size differs from expected', {
+          filePath,
+          expectedSize,
+          actualSize,
+          difference: sizeDifference
+        }, 'FileOrganizer');
+      }
+      
+    } catch (error) {
+      if (error instanceof FileSystemError) {
+        throw error;
+      }
+      
+      throw new FileSystemError(
+        `Failed to verify written file: ${filePath}`,
+        filePath,
+        'validateFileWritten',
+        {
+          component: 'FileOrganizer',
+          operation: 'validateFileWritten',
+          metadata: { filePath, expectedSize }
+        },
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
   }
 } 
