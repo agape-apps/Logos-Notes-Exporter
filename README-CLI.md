@@ -10,9 +10,9 @@ from https://github.com/agape-apps/LogosNotesExport/releases
 
 Choose the binary for your platform:
 
-- **🍎 macOS (Intel)**: `LogosNotesExporter-macos-x64` (tested and working)
-- **🍎 macOS (Apple Silicon)**: `LogosNotesExporter-macos-arm64` (untested)
-- **🪟 Windows**: `LogosNotesExporter-windows-x64.exe` (works, limited testing)
+- **🍎 macOS (Intel)**: `Logos-Notes-Exporter-macos-x64` (tested and working)
+- **🍎 macOS (Apple Silicon)**: `Logos-Notes-Exporter-macos-arm64` (untested)
+- **🪟 Windows**: `Logos-Notes-Exporter-windows-x64.exe` (works, limited testing)
 
 ## 📖 Getting Started (in a Terminal)
 
@@ -21,51 +21,51 @@ on macOS:
 - make executable, move & rename, run
 
 ```
-chmod +x LogosNotesExporter-*
-mv -v LogosNotesExporter-* /usr/local/bin/LogosNotesExporter
-LogosNotesExporter --help
+chmod +x Logos-Notes-Exporter-*
+mv -v Logos-Notes-Exporter-* /usr/local/bin/Logos-Notes-Exporter
+Logos-Notes-Exporter --help
 ```
 
 on Windows run:
 
 ```
-LogosNotesExporter-windows-x64.exe --help
+Logos-Notes-Exporter-windows-x64.exe --help
 ```
 
 ### Basic Export
 
 ```bash
 # Export all notes with default settings into Notebook folders
-LogosNotesExporter
+Logos-Notes-Exporter
 
 # Specify custom database location
-LogosNotesExporter --database /path/to/notestool.db
+Logos-Notes-Exporter --database /path/to/notestool.db
 
 # Export to custom directory
-LogosNotesExporter --output ./my-exported-notes
+Logos-Notes-Exporter --output ./my-exported-notes
 ```
 
 ### Advanced Options
 
 ```bash
 # Dry run to see what would be exported
-LogosNotesExporter --dry-run --verbose
+Logos-Notes-Exporter --dry-run --verbose
 
 # Export with date-based folders (instead of Notebook folders)
-LogosNotesExporter --date-folders --no-organize-notebooks
+Logos-Notes-Exporter --date-folders --no-organize-notebooks
 
 # Export without YAML frontmatter and show some metadata in content
-LogosNotesExporter --no-frontmatter --show-metadata
+Logos-Notes-Exporter --no-frontmatter --show-metadata
 
 # Custom date format
-LogosNotesExporter --date-format short
+Logos-Notes-Exporter --date-format short
 ```
 
 ### Command Line Options
 
 ```
 USAGE:
-  LogosNotesExporter [OPTIONS]
+  Logos-Notes-Exporter [OPTIONS]
 
 OPTIONS:
   --database, -d        Path to NotesTool database file (auto-detected if not specified)

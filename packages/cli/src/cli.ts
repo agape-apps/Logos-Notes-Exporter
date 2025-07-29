@@ -2,7 +2,7 @@
 import { parseArgs } from 'util';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { 
+import {
   LogosNotesExporter,
   type CoreExportOptions,
   type ExportCallbacks,
@@ -60,7 +60,7 @@ const HELP_TEXT = `
 Logos Notes Exporter - Convert Logos notes to Markdown
 
 USAGE:
-  LogosNotesExporter [OPTIONS]
+  Logos-Notes-Exporter [OPTIONS]
 
 OPTIONS:
   --database, -d        Path to NotesTool database file (auto-detected if not specified)
@@ -96,28 +96,28 @@ OPTIONS:
 
 EXAMPLES:
   # Basic export (auto-locates database)
-  LogosNotesExporter
+  Logos-Notes-Exporter
 
   # Include highlight notes as well
-  LogosNotesExporter --include-highlights
+  Logos-Notes-Exporter --include-highlights
   
   # Custom output directory location
-  LogosNotesExporter --output ./My-Notes
+  Logos-Notes-Exporter --output ./My-Notes
   
   # Dry run to see what would be exported
-  LogosNotesExporter --dry-run --verbose
+  Logos-Notes-Exporter --dry-run --verbose
   
   # Export without frontmatter and show metadata in content
-  LogosNotesExporter --no-frontmatter --show-metadata
+  Logos-Notes-Exporter --no-frontmatter --show-metadata
 
   # List available database locations
-  LogosNotesExporter --list-databases
+  Logos-Notes-Exporter --list-databases
   
   # Export using a custom database location
-  LogosNotesExporter --database ./path/to/notestool.db
+  Logos-Notes-Exporter --database ./path/to/notestool.db
   
   # Export only notes from a specific notebook
-  LogosNotesExporter --notebook "Bible Study Notes"
+  Logos-Notes-Exporter --notebook "Bible Study Notes"
 
 NOTES:
   - All database operations are READ-ONLY for safety, Logos can continue to be used while exporting

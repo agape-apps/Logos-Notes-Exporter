@@ -14,9 +14,9 @@
     "start": "bun run dist/cli.js",
     "test": "bun test",
     "validate:binary": "test -d dist || (echo 'CLI not built. Run: pnpm run build' && exit 1)",
-    "binary:macx64": "pnpm run validate:binary && bun build --compile --target=bun-macos-x64 src/cli.ts --outfile ../../bin/macos-x64/LogosNotesExporter && echo 'macOS x64 binary created successfully'",
-    "binary:macarm": "pnpm run validate:binary && bun build --compile --target=bun-macos-arm64 src/cli.ts --outfile ../../bin/macos-arm64/LogosNotesExporter && echo 'macOS ARM64 binary created successfully'",
-    "binary:windows": "pnpm run validate:binary && bun build --compile --target=bun-windows-x64 src/cli.ts --outfile ../../bin/windows-x64/LogosNotesExporter.exe && echo 'Windows x64 binary created successfully'",
+    "binary:macx64": "pnpm run validate:binary && bun build --compile --target=bun-macos-x64 src/cli.ts --outfile ../../bin/macos-x64/Logos-Notes-Exporter && echo 'macOS x64 binary created successfully'",
+    "binary:macarm": "pnpm run validate:binary && bun build --compile --target=bun-macos-arm64 src/cli.ts --outfile ../../bin/macos-arm64/Logos-Notes-Exporter && echo 'macOS ARM64 binary created successfully'",
+    "binary:windows": "pnpm run validate:binary && bun build --compile --target=bun-windows-x64 src/cli.ts --outfile ../../bin/windows-x64/Logos-Notes-Exporter.exe && echo 'Windows x64 binary created successfully'",
     "binary:all": "echo 'Creating binaries for all platforms...' && pnpm run binary:macx64 && pnpm run binary:macarm && pnpm run binary:windows && echo 'All platform binaries created successfully!'",
     "clean": "rm -rf dist && rm -f tsconfig.tsbuildinfo"
   },

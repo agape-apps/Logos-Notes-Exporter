@@ -17,18 +17,18 @@ jobs:
           - os: macos-latest
             target: bun-macos-x64
             script: binary:macx64
-            artifact: bin/macos-x64/LogosNotesExporter
-            name: LogosNotesExporter-macos-x64
+            artifact: bin/macos-x64/Logos-Notes-Exporter
+            name: Logos-Notes-Exporter-macos-x64
           - os: macos-latest
             target: bun-macos-arm64
             script: binary:macarm
-            artifact: bin/macos-arm64/LogosNotesExporter
-            name: LogosNotesExporter-macos-arm64
+            artifact: bin/macos-arm64/Logos-Notes-Exporter
+            name: Logos-Notes-Exporter-macos-arm64
           - os: windows-latest
             target: bun-windows-x64
             script: binary:windows
-            artifact: bin/windows-x64/LogosNotesExporter.exe
-            name: LogosNotesExporter-windows-x64.exe
+            artifact: bin/windows-x64/Logos-Notes-Exporter.exe
+            name: Logos-Notes-Exporter-windows-x64.exe
 
     steps:
       - name: Checkout code
@@ -100,16 +100,16 @@ jobs:
         run: |
           mkdir -p ./release-files
           # Copy and rename files with correct names
-          cp ./artifacts/LogosNotesExporter-macos-x64/LogosNotesExporter ./release-files/LogosNotesExporter-macos-x64
-          cp ./artifacts/LogosNotesExporter-macos-arm64/LogosNotesExporter ./release-files/LogosNotesExporter-macos-arm64
-          cp ./artifacts/LogosNotesExporter-windows-x64.exe/LogosNotesExporter.exe ./release-files/LogosNotesExporter-windows-x64.exe
+          cp ./artifacts/Logos-Notes-Exporter-macos-x64/Logos-Notes-Exporter ./release-files/Logos-Notes-Exporter-macos-x64
+          cp ./artifacts/Logos-Notes-Exporter-macos-arm64/Logos-Notes-Exporter ./release-files/Logos-Notes-Exporter-macos-arm64
+          cp ./artifacts/Logos-Notes-Exporter-windows-x64.exe/Logos-Notes-Exporter.exe ./release-files/Logos-Notes-Exporter-windows-x64.exe
           # Make macOS binaries executable
-          chmod +x ./release-files/LogosNotesExporter-macos-*
+          chmod +x ./release-files/Logos-Notes-Exporter-macos-*
           # Generate SHA256 checksums
           cd ./release-files
-          sha256sum LogosNotesExporter-macos-x64 > LogosNotesExporter-macos-x64.sha256
-          sha256sum LogosNotesExporter-macos-arm64 > LogosNotesExporter-macos-arm64.sha256
-          sha256sum LogosNotesExporter-windows-x64.exe > LogosNotesExporter-windows-x64.exe.sha256
+          sha256sum Logos-Notes-Exporter-macos-x64 > Logos-Notes-Exporter-macos-x64.sha256
+          sha256sum Logos-Notes-Exporter-macos-arm64 > Logos-Notes-Exporter-macos-arm64.sha256
+          sha256sum Logos-Notes-Exporter-windows-x64.exe > Logos-Notes-Exporter-windows-x64.exe.sha256
           cd ..
           echo "=== Final release files ==="
           ls -la ./release-files/
@@ -125,20 +125,20 @@ jobs:
             ### 📦 Download
 
             **Download** the appropriate binary for your platform:
-            - **🍎 macOS (Intel)**: `LogosNotesExporter-macos-x64`
-            - **🍎 macOS (Apple Silicon)**: `LogosNotesExporter-macos-arm64`  
-            - **🪟 Windows**: `LogosNotesExporter-windows-x64.exe`
+            - **🍎 macOS (Intel)**: `Logos-Notes-Exporter-macos-x64`
+            - **🍎 macOS (Apple Silicon)**: `Logos-Notes-Exporter-macos-arm64`  
+            - **🪟 Windows**: `Logos-Notes-Exporter-windows-x64.exe`
           
             ### 🚀 Quick Start - use a Terminal
 
             **macOS:**
-            1. **Install**: `chmod +x LogosNotesExporter-* && mv -v LogosNotesExporter-* /usr/local/bin/LogosNotesExporter`
-            2. **Run**: `LogosNotesExporter --help`
-            3. **Export your notes**: `LogosNotesExporter`
+            1. **Install**: `chmod +x Logos-Notes-Exporter-* && mv -v Logos-Notes-Exporter-* /usr/local/bin/Logos-Notes-Exporter`
+            2. **Run**: `Logos-Notes-Exporter --help`
+            3. **Export your notes**: `Logos-Notes-Exporter`
 
             **Windows:**
-            1. **Run**: `LogosNotesExporter-windows-x64.exe --help`
-            2. **Export your notes**: `LogosNotesExporter-windows-x64.exe`
+            1. **Run**: `Logos-Notes-Exporter-windows-x64.exe --help`
+            2. **Export your notes**: `Logos-Notes-Exporter-windows-x64.exe`
             
             ### 📖 Full Documentation
             See [README.md](https://github.com/agape-apps/LogosNotesExport/blob/main/README.md) for complete usage instructions and examples.
@@ -152,22 +152,22 @@ jobs:
 
             **macOS/Linux**
             ```bash
-            sha256sum -c LogosNotesExporter-*.sha256
+            sha256sum -c Logos-Notes-Exporter-*.sha256
             ```
             
             **Windows (PowerShell)**
             ```powershell
-            Get-FileHash LogosNotesExporter-windows-x64.exe -Algorithm SHA256
+            Get-FileHash Logos-Notes-Exporter-windows-x64.exe -Algorithm SHA256
             ```
-            - Compare with content of LogosNotesExporter-windows-x64.exe.sha256
+            - Compare with content of Logos-Notes-Exporter-windows-x64.exe.sha256
             ```
           files: |
-            ./release-files/LogosNotesExporter-macos-x64
-            ./release-files/LogosNotesExporter-macos-x64.sha256
-            ./release-files/LogosNotesExporter-macos-arm64
-            ./release-files/LogosNotesExporter-macos-arm64.sha256
-            ./release-files/LogosNotesExporter-windows-x64.exe
-            ./release-files/LogosNotesExporter-windows-x64.exe.sha256
+            ./release-files/Logos-Notes-Exporter-macos-x64
+            ./release-files/Logos-Notes-Exporter-macos-x64.sha256
+            ./release-files/Logos-Notes-Exporter-macos-arm64
+            ./release-files/Logos-Notes-Exporter-macos-arm64.sha256
+            ./release-files/Logos-Notes-Exporter-windows-x64.exe
+            ./release-files/Logos-Notes-Exporter-windows-x64.exe.sha256
           draft: false
           prerelease: false
         env:

@@ -219,7 +219,7 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                     <Input
                       value={settings.outputDirectory}
                       onChange={(e) => onSettingsChange({ outputDirectory: e.target.value })}
-                      placeholder="~/Documents/Logos-Exported-Notes"
+                      placeholder="~/Documents"
                       className="flex-1"
                     />
                     <Tooltip>

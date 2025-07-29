@@ -3,9 +3,9 @@
 ## HIGH PRIORITY - BUGS & ISSUES
 
 - [ ] Fix validation issues: 📋 Validation FAILED - 31 files checked, 2 errors ❌ Errors found: Note count mismatch: expected 29, found 31 (REPRODUCE)
-- [ ] Create a subfolder always: Manual selection without creating a default folder could cause problems: /Users/christian/Documents/Test Output
+- [x] Create a subfolder always: Manual selection without creating a default folder could cause problems: /Users/christian/Documents/Test Output
 - [ ] Do we really want to add tags by default? (Notebook name, etc.)
-- [ ] Consider changing LogosNotesExporter CLI command to Logos-Notes-Exporter for consistency (optional)
+- [x] Change LogosNotesExporter CLI command to Logos-Notes-Exporter for consistency
 
 ## BINARY BUILDS & PUBLISHING
 

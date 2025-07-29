@@ -94,15 +94,15 @@ This document provides comprehensive documentation for all scripts in the Logos 
 ### Binary Creation Scripts
 - **`binary:macx64`** - Creates standalone macOS x64 binary
   - Pre-validates build, creates output directory, builds binary with success confirmation
-  - Output: `../../bin/macos-x64/LogosNotesExporter`
+  - Output: `../../bin/macos-x64/Logos-Notes-Exporter`
   
 - **`binary:macarm`** - Creates standalone macOS ARM64 binary
   - Pre-validates build, creates output directory, builds binary with success confirmation
-  - Output: `../../bin/macos-arm64/LogosNotesExporter`
+  - Output: `../../bin/macos-arm64/Logos-Notes-Exporter`
   
 - **`binary:windows`** - Creates standalone Windows x64 binary
   - Pre-validates build, creates output directory, builds binary with success confirmation
-  - Output: `../../bin/windows-x64/LogosNotesExporter.exe`
+  - Output: `../../bin/windows-x64/Logos-Notes-Exporter.exe`
   
 - **`binary:all`** - Creates binaries for all platforms sequentially
   - Builds macOS x64, macOS ARM64, and Windows x64 binaries with comprehensive status reporting

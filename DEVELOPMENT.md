@@ -30,7 +30,7 @@ bun run binary:macarm    # Build for macOS Apple Silicon
 bun run binary:windows   # Build for Windows x64
 ```
 
-- LogosNotesExporter binary files will be in bin/...
+- Logos-Notes-Exporter binary files will be in bin/...
 
 ## Publish release
 

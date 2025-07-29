@@ -9,8 +9,8 @@
 declare const require: any;
 
 /**
- * Get the default output directory path cross-platform
- * Returns user's Documents/Logos-Exported-Notes in Node.js environments (CLI, Electron main)
+ * Get the default output directory path cross-platform (subfolder will be appended)
+ * Returns user's Documents/ in Node.js environments (CLI, Electron main)
  * Returns fallback path in other contexts (Electron renderer with context isolation)
  */
 function getDefaultOutputDirectory(): string {
@@ -24,7 +24,7 @@ function getDefaultOutputDirectory(): string {
     try {
       const os = require('os');
       const path = require('path');
-      const fullPath = path.join(os.homedir(), 'Documents', 'Logos-Exported-Notes');
+      const fullPath = path.join(os.homedir(), 'Documents');
       console.log('📁 Using default output directory:', fullPath);
       return fullPath;
     } catch (error) {
