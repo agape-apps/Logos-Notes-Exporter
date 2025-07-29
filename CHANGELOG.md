@@ -34,3 +34,4 @@
 - 2025-07-24 feat: enhanced notebook index files - renamed README.md to INDEX.md with inline note content, alphabetical sorting, and highlights support
 - 2025-07-25: Implemented tab-to-indent conversion - leading tabs in XAML text are converted to user's preferred indent format (blockquotes or nbsp)
 - 2025-07-26 refactor: complete rename from useAppStore to useStore including filename and documentation
+- 2025-07-29 - feat: add default subfolder feature to prevent cluttering user directories with configurable subfolder name option in advanced settings

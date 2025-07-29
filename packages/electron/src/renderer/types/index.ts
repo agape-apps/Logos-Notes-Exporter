@@ -6,6 +6,7 @@ export interface ExportSettings {
 
   // Output
   outputDirectory: string;
+  exportSubfolderName: string;
   organizeByNotebooks: boolean;
   includeDateFolders: boolean;
   createIndexFiles: boolean;
@@ -117,6 +118,7 @@ import { DEFAULT_CONFIG } from '@logos-notes-exporter/config';
 export const DEFAULT_SETTINGS: ExportSettings = {
   autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
   outputDirectory: DEFAULT_CONFIG.export.outputDirectory,
+  exportSubfolderName: DEFAULT_CONFIG.export.defaultSubfolderName,
   organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
   includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
   createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,

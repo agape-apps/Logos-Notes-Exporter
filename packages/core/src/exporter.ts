@@ -22,6 +22,8 @@ export interface CoreExportOptions {
   database?: string;
   /** Output directory */
   output?: string;
+  /** Subfolder name to create under the output directory */
+  exportSubfolderName?: string;
   /** Organization options */
   organizeByNotebooks?: boolean;
   includeDateFolders?: boolean;
@@ -133,8 +135,12 @@ export class LogosNotesExporter {
     }
     
     // Configure file organizer
+    const baseOutputDir = options.output || DEFAULT_CONFIG.export.outputDirectory;
+    const subfolderName = options.exportSubfolderName || DEFAULT_CONFIG.export.defaultSubfolderName;
+    const finalOutputPath = join(baseOutputDir, subfolderName);
+    
     const fileOptions: Partial<FileStructureOptions> = {
-      baseDir: options.output || DEFAULT_CONFIG.export.outputDirectory,
+      baseDir: finalOutputPath,
       organizeByNotebooks: options.organizeByNotebooks !== false,
       includeDateFolders: options.includeDateFolders || false,
       createIndexFiles: options.createIndexFiles !== false,

@@ -75,6 +75,7 @@ function settingsFileToExportSettings(settingsFile: SettingsFile): ExportSetting
     databasePath: settingsFile.database.customPath,
     autoDetectDatabase: settingsFile.database.autoDetect ?? true,
     outputDirectory: outputDirectory,
+    exportSubfolderName: DEFAULT_CONFIG.export.defaultSubfolderName,
     organizeByNotebooks: settingsFile.output.organizeByNotebooks ?? true,
     includeDateFolders: settingsFile.output.includeDateFolders ?? false,
     createIndexFiles: settingsFile.output.createIndexFiles ?? true,
@@ -103,6 +104,7 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
       const defaultSettings: ExportSettings = {
       autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
       outputDirectory: getAbsoluteOutputDirectory(), // Use absolute path
+      exportSubfolderName: DEFAULT_CONFIG.export.defaultSubfolderName,
       organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
         includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
         createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,
@@ -152,6 +154,7 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
     const defaultSettings: ExportSettings = {
       autoDetectDatabase: DEFAULT_CONFIG.export.autoDetectDatabase,
       outputDirectory: getAbsoluteOutputDirectory(), // Use absolute path
+      exportSubfolderName: DEFAULT_CONFIG.export.defaultSubfolderName,
       organizeByNotebooks: DEFAULT_CONFIG.export.organizeByNotebooks,
       includeDateFolders: DEFAULT_CONFIG.export.includeDateFolders,
       createIndexFiles: DEFAULT_CONFIG.export.createIndexFiles,

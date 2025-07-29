@@ -82,6 +82,7 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                       <h3 className="font-semibold mb-2">Output Settings</h3>
                       <ul className="space-y-1 text-muted-foreground ml-4">
                         <li>• <strong>Output Directory:</strong> Where your exported Markdown files will be saved</li>
+                        <li>• <strong>Export Subfolder Name:</strong> Subfolder created under output directory to organize exported files</li>
                         <li>• <strong>Organize by notebooks:</strong> Creates folders matching your Logos notebook structure</li>
                         <li>• <strong>Include date folders:</strong> Groups notes by creation date within notebooks</li>
                         <li>• <strong>Skip highlights:</strong> Only exports text notes and annotations, not highlight-only notes</li>
@@ -223,8 +224,8 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                     />
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={onSelectOutputDirectory}
                         >
@@ -234,6 +235,25 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                       <TooltipContent>Choose where to save the exported files</TooltipContent>
                     </Tooltip>
                   </div>
+                </div>
+
+                {/* Export Subfolder Name */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Export Subfolder Name</label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Input
+                        value={settings.exportSubfolderName}
+                        onChange={(e) => onSettingsChange({ exportSubfolderName: e.target.value })}
+                        placeholder="Logos-Exported-Notes"
+                        className="w-full"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>Subfolder name created under the output directory to organize exported files</TooltipContent>
+                  </Tooltip>
+                  <p className="text-xs text-muted-foreground">
+                    Files will be exported to: {settings.outputDirectory}/{settings.exportSubfolderName}
+                  </p>
                 </div>
 
                 {/* Organization Options */}

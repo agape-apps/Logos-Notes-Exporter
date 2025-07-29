@@ -98,6 +98,8 @@ export const DEFAULT_CONFIG = {
     autoDetectDatabase: true,
     /** Default output directory - cross-platform user Documents folder */
     outputDirectory: getDefaultOutputDirectory(),
+    /** Default subfolder name to create under the selected output directory */
+    defaultSubfolderName: 'Logos-Exported-Notes',
     /** Organize notes by notebooks */
     organizeByNotebooks: true,
     /** Create date-based subdirectories */

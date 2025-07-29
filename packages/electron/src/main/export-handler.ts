@@ -141,6 +141,7 @@ export async function executeExport(
   const coreOptions: CoreExportOptions = {
     database: updatedSettings.databasePath,
     output: updatedSettings.outputDirectory,
+    exportSubfolderName: updatedSettings.exportSubfolderName,
     organizeByNotebooks: updatedSettings.organizeByNotebooks,
     includeDateFolders: updatedSettings.includeDateFolders,
     createIndexFiles: updatedSettings.createIndexFiles,
