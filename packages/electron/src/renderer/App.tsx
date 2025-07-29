@@ -37,6 +37,7 @@ const App: React.FC = () => {
   } = useStore();
 
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasReceivedMainSettings, setHasReceivedMainSettings] = useState(false);
 
   // Initialize app on mount
   useEffect(() => {
@@ -49,6 +50,7 @@ const App: React.FC = () => {
         if (savedData) {
           console.log('Renderer: Loaded settings from main process');
           setSettings(savedData.settings);
+          setHasReceivedMainSettings(true); // Mark that we have main process settings
           // Restore the saved app mode
           setMode(savedData.mode as AppMode);
           
@@ -127,6 +129,10 @@ const App: React.FC = () => {
   // Auto-save settings when they change
   useEffect(() => {
     if (!isInitialized) return; // Don't save during initial load
+    if (!hasReceivedMainSettings) {
+      console.log('Skipping auto-save until main process settings are received');
+      return; // Don't save until we have correct settings from main process
+    }
     
     // Debounce the save operation to avoid excessive writes
     const saveTimeout = setTimeout(async () => {
@@ -139,7 +145,7 @@ const App: React.FC = () => {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(saveTimeout);
-  }, [settings, isInitialized]);
+  }, [settings, isInitialized, hasReceivedMainSettings]);
 
   // Auto-save mode changes
   useEffect(() => {
@@ -247,6 +253,7 @@ const App: React.FC = () => {
       window.electronAPI.onSettingsLoaded((loadedSettings) => {
         console.log('✅ Renderer: Received correct settings from main process, output directory:', loadedSettings.outputDirectory);
         setSettings(loadedSettings);
+        setHasReceivedMainSettings(true); // Mark that we now have main process settings
       }),
       
       window.electronAPI.onDatabaseDetected((path) => {

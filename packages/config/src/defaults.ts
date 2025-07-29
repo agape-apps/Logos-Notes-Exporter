@@ -31,14 +31,38 @@ function getDefaultOutputDirectory(): string {
       console.warn('⚠️  Failed to access Node.js modules. Using fallback path.');
       console.warn(`   Error: ${error instanceof Error ? error.message : String(error)}`);
     }
-  } else {
-    // Context without Node.js access (e.g., Electron renderer with context isolation)
-    console.log('📁 Using temporary default path (will be overridden by proper settings)');
+  }
+  // TODO: check which of these workarounds are still needed. Check logs.
+  // Enhanced fallback for renderer context - try multiple methods to get the correct user
+  console.log('📁 Using enhanced fallback for renderer context');
+  
+  // Method 1: Try to get home directory from environment variables
+  if (typeof process !== 'undefined' && process.env) {
+    const homeDir = process.env.HOME || process.env.USERPROFILE;
+    if (homeDir && !homeDir.includes('/user/') && !homeDir.includes('\\user\\')) {
+      const documentsPath = homeDir + '/Documents';
+      console.log('📁 Using environment-based documents path:', documentsPath);
+      return documentsPath;
+    }
   }
   
-  // Fallback path
-  console.log('📁 Temporary default output directory: ./Logos-Exported-Notes');
-  return './Logos-Exported-Notes';
+  // Method 2: Try to get current user from environment
+  let currentUser = 'user'; // fallback
+  if (typeof process !== 'undefined' && process.env) {
+    currentUser = process.env.USER || process.env.USERNAME || process.env.LOGNAME || 'user';
+  }
+  
+  // Method 3: Try to infer from app data path if available
+  if (typeof process !== 'undefined' && process.env && process.env.HOME) {
+    const homeMatch = process.env.HOME.match(/\/Users\/([^/]+)/);
+    if (homeMatch && homeMatch[1] && homeMatch[1] !== 'user') {
+      currentUser = homeMatch[1];
+    }
+  }
+  
+  const fallbackPath = '/Users/' + currentUser + '/Documents';
+  console.log('📁 Using enhanced fallback path with user:', currentUser, '→', fallbackPath);
+  return fallbackPath;
 }
 
 export const DEFAULT_CONFIG = {

@@ -93,6 +93,15 @@ export async function executeExport(
 ): Promise<ExportResult> {
   console.log('Export handler: Starting export');
   
+  // Failsafe: Correct wrong output directory if it slipped through
+  // TODO: check if this failsafe is still needed. Check logs.
+  if (settings.outputDirectory === './Logos-Exported-Notes' || 
+      settings.outputDirectory === '/Users/user/Documents') {
+    const correctedPath = path.join(require('os').homedir(), 'Documents');
+    console.log('🛡️ Export handler failsafe: Correcting output directory from', settings.outputDirectory, 'to', correctedPath);
+    settings = { ...settings, outputDirectory: correctedPath };
+  }
+  
   // Add debugging to see what we're receiving
   console.log('Export settings received:', {
     databasePath: settings.databasePath,

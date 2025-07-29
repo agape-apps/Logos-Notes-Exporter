@@ -20,9 +20,10 @@ function getSettingsPath(): string {
 /**
  * Gets the correct absolute path for the default output directory
  * This ensures we always use the absolute path in the main process
+ * Note: This returns only the base directory, subfolder will be added during export
  */
 function getAbsoluteOutputDirectory(): string {
-  return path.join(os.homedir(), 'Documents', 'Logos-Exported-Notes');
+  return path.join(os.homedir(), 'Documents');
 }
 
 /**
@@ -138,9 +139,23 @@ export function loadSettings(): { settings: ExportSettings; mode: AppMode; windo
 
     const loadedSettings = settingsFileToExportSettings(settingsFile);
     
-    // Ensure output directory is absolute if it's still relative
-    if (loadedSettings.outputDirectory === './Logos-Exported-Notes') {
+    // Ensure output directory is absolute if it's still relative or using fallback user
+    // TODO: check if this workaround is still needed. Check logs.
+    if (loadedSettings.outputDirectory === './Logos-Exported-Notes' || 
+        loadedSettings.outputDirectory === '/Users/user/Documents') {
+      const oldPath = loadedSettings.outputDirectory;
       loadedSettings.outputDirectory = getAbsoluteOutputDirectory();
+      console.log('🔧 Corrected output directory from', 
+        oldPath === './Logos-Exported-Notes' ? 'relative' : 'fallback user', 
+        'path to:', loadedSettings.outputDirectory);
+      
+      // Force save the corrected settings immediately to prevent reoccurrence
+      try {
+        saveSettings(loadedSettings, settingsFile.ui.mode, settingsFile.ui.windowSize);
+        console.log('💾 Saved corrected settings to file');
+      } catch (saveError) {
+        console.error('Failed to save corrected settings:', saveError);
+      }
     }
 
     return {
