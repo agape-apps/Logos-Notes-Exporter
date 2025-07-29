@@ -1,7 +1,7 @@
 {
   "name": "@logos-notes-exporter/electron",
   "productName": "Logos-Notes-Exporter",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Electron desktop application for Logos Notes Exporter - Convert Logos notes to Markdown with GUI",
   "main": ".webpack/main",
   "scripts": {
