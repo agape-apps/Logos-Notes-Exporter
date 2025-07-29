@@ -244,7 +244,7 @@ export class FileOrganizer {
 
     // Add Text Notes links section
     if (textNotes.length > 0) {
-      lines.push("### ✍️ Text Notes");
+      lines.push("### ✍️ Text Notes List");
       lines.push("");
       const sortedTextNotes = textNotes.sort(sortByFilename);
       sortedTextNotes.forEach((note) => {
@@ -262,7 +262,7 @@ export class FileOrganizer {
 
     // Add Highlights links section
     if (highlights.length > 0) {
-      lines.push("### 🎨 Highlights");
+      lines.push("### 🎨 Highlights List");
       lines.push("");
       const sortedHighlights = highlights.sort(sortByFilename);
       sortedHighlights.forEach((note) => {
@@ -298,7 +298,7 @@ export class FileOrganizer {
 
     // Add notes count and created date
     lines.push(
-      `**Notes:** ${group.notes.length}  **Created:** ${
+      `**Notes:** ${group.notes.length}  **Notebook Created:** ${
         group.notebook
           ? new Date(group.notebook.createdDate).toLocaleDateString()
           : "Unknown"
@@ -358,7 +358,7 @@ export class FileOrganizer {
     const bibleVersion = this.extractBibleVersion(note);
 
     // Add note heading
-    lines.push(`### ${title}${bibleVersion ? ` (${bibleVersion})` : ""}`);
+    lines.push(`#### ${title}${bibleVersion ? ` (${bibleVersion})` : ""}`);
     lines.push("");
 
     // Add note content from the markdown file

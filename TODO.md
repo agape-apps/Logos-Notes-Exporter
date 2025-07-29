@@ -4,12 +4,12 @@
 
 - [x] Binary Electron package runs: https://www.electronjs.org/docs/latest/tutorial/forge-overview
 - [ ] Electron publish: https://www.electronjs.org/docs/latest/tutorial/tutorial-publishing-updating
-- [x] APP LOGO works
+- [x] Add APP LOGO 
 
 ## BUGS & ISSUES
 
-- this date is not relevant to the context: **Created:** 4/15/2017   (Notebook created?). Also improve headings
-- fix validation issues: 📋 Validation FAILED - 31 files checked, 2 errors ❌ Errors found: Note count mismatch: expected 29, found 31
+- [x] this date is for Notebook created: **Created:** 4/15/2017
+- [ ] fix validation issues: 📋 Validation FAILED - 31 files checked, 2 errors ❌ Errors found: Note count mismatch: expected 29, found 31
 
 - [ ] Create a subfolder always: Manual selection without creating a default folder could cause problems: /Users/christian/Documents/Test Output
 - [x] remove unused dev db location LogosDocuments
@@ -61,7 +61,7 @@ once the app is packaged.)
 ## EXPORT OPTIONS & FEATURES
 
 - [x] Export notes for each Notebook into one Markdown Index file 
-- [ ] Export just one Notebook (useful for big collections)
+- [x] Export just one Notebook (useful for big collections)
 - [ ] Export by Tags (not tested tags yet) OPTIONAL
 - [x] Include the scripture reference in notes text (MOSTLY DONE, check)
 - [ ] add more flexible conversion options (depending on Markdown target) (OPTIONS IN SETTINGS)
@@ -124,7 +124,7 @@ once the app is packaged.)
 ## GUI & USER INTERFACE
 
 - [x] separate Progress display into dedicated card component in Basic view
-- [ ] Implement improvements, refactoring from Electron App Evaluation, see EVALUATION.md
+- [x] Implement improvements, refactoring from Electron App Evaluation, see EVALUATION.md
 
 ## APP-SPECIFIC FEATURES
 

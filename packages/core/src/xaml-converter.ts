@@ -965,22 +965,28 @@ export class XamlToMarkdownConverter {
 
     return cells;
   }
-
+  
+  // TODO Is this function actually used?
   private extractPlainText(xamlContent: string): string {
     const textMatches = xamlContent.match(/Text="([^"]*?)"/g) || [];
-    const plainTexts = textMatches.map(match => {
-      let text = match.replace(/Text="([^"]*?)"/, '$1');
+    const plainTexts = textMatches.map((match) => {
+      let text = match.replace(/Text="([^"]*?)"/, "$1");
       text = this.decodeEntities(text);
       return this.unicodeCleaner.cleanXamlText(text);
     });
 
-    let result = plainTexts.join('\n').trim();
+    let result = plainTexts.join("\n").trim();
 
     // Detect and format simple structures
-    result = result.replace(/### (.+)/g, '\n\n### $1\n\n');
-    result = result.replace(/\b[0-9]+\. /g, '\n$0');
-    result = result.replace(/\b\* /g, '\n$0');
-    result = result.replace(/\b- /g, '\n$0');
+
+    // Adds two blank lines before and after the H3 heading
+    result = result.replace(/### (.+)/g, "\n\n### $1\n\n");
+    // Detects ordered list items like 1. or 2. and ensures they start on a new line.
+    result = result.replace(/\b[0-9]+\. /g, "\n$0");
+    // Formats unordered list items using asterisk (* )
+    result = result.replace(/\b\* /g, "\n$0");
+    // Formats unordered list items using dash (- )
+    result = result.replace(/\b- /g, "\n$0");
 
     return result;
   }
