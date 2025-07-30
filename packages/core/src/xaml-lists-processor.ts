@@ -1,21 +1,4 @@
-// XamlElement interface - copied from main converter for type safety
-interface XamlElement {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
-  '@_FontSize'?: string;
-  '@_FontWeight'?: string;
-  '@_FontStyle'?: string;
-  '@_FontFamily'?: string;
-  '@_BorderThickness'?: string;
-  '@_BorderBrush'?: string;
-  '@_Text'?: string;
-  '@_Tag'?: string;
-  '@_NavigateUri'?: string;
-  '@_MarkerStyle'?: string;
-  '@_Kind'?: string; // Added for list Kind
-  '@_Margin'?: string; // Added for paragraph indentation
-  '#text'?: string;
-}
+import type { XamlElement } from './xaml-text-formatter.js';
 
 /**
  * Context information for processing nested lists
@@ -41,10 +24,10 @@ interface ItemContent {
  * nested lists while maintaining proper indentation and markdown formatting.
  */
 export class XamlListProcessor {
-  private converter: any; // Reference to main XamlToMarkdownConverter
+  private elementProcessor: any; // Reference to XamlElementProcessor
 
-  constructor(converter: any) {
-    this.converter = converter;
+  constructor(elementProcessor: any) {
+    this.elementProcessor = elementProcessor;
   }
 
   /**
@@ -59,7 +42,7 @@ export class XamlListProcessor {
       if (!list) continue;
 
       // Extract list attributes using the converter's helper
-      const attrs = this.converter.getAttributes(list);
+      const attrs = this.elementProcessor.textFormatter.getAttributes(list);
       const markerStyle = attrs['@_Kind'] || attrs['@_MarkerStyle'] || 'Disc';
       const listType: 'ordered' | 'unordered' = markerStyle.toLowerCase() === 'decimal' ? 'ordered' : 'unordered';
       
@@ -130,7 +113,7 @@ export class XamlListProcessor {
     if (nestedLists.length > 0) {
       for (const nestedList of nestedLists) {
         // Extract list attributes to determine the list type for nested items
-        const attrs = this.converter.getAttributes(nestedList);
+        const attrs = this.elementProcessor.textFormatter.getAttributes(nestedList);
         const markerStyle = attrs['@_Kind'] || attrs['@_MarkerStyle'] || 'Disc';
         const nestedListType: 'ordered' | 'unordered' = markerStyle.toLowerCase() === 'decimal' ? 'ordered' : 'unordered';
         
@@ -225,7 +208,7 @@ export class XamlListProcessor {
     for (const element of content) {
       if (element && typeof element === 'object') {
         // Use the main converter's processElement method for consistency
-        result += this.converter.processElement(element);
+        result += this.elementProcessor.processElement(element);
       }
     }
     
