@@ -37,3 +37,4 @@
 - 2025-07-29 - feat: add default subfolder feature to prevent cluttering user directories with configurable subfolder name option in advanced settings
 - 2025-07-29 - feat: complete renaming of CLI command from LogosNotesExporter to Logos-Notes-Exporter across all project files for consistency
 - Release v1.3.0: Enhanced CLI and Electron apps with unified export paths, improved UI and icons, better environment detection, refined database handling, and consistent naming across features.
+2025-07-30: Refactored monolithic xaml-converter.ts into 3 focused modules (XamlElementProcessor, XamlFormattingService, XamlUtilities) reducing complexity
