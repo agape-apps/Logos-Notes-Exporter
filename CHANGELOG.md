@@ -1,6 +1,5 @@
-# Change Log
+# Change Log (changes must be appended at the bottom)
 
-- 2025-07-30: Refactor monolithic xaml-converter.ts into focused modules reducing complexity from 1,181 lines to 4 specialized modules
 - Release v1.0.3: Initial beta release
 - Release v1.0.4: correct Windows database search path from Logos4 to Logos directory
 - Release v1.0.5: add SHA256 checksum files for binary integrity verification
@@ -38,4 +37,6 @@
 - 2025-07-29 - feat: add default subfolder feature to prevent cluttering user directories with configurable subfolder name option in advanced settings
 - 2025-07-29 - feat: complete renaming of CLI command from LogosNotesExporter to Logos-Notes-Exporter across all project files for consistency
 - Release v1.3.0: Enhanced CLI and Electron apps with unified export paths, improved UI and icons, better environment detection, refined database handling, and consistent naming across features.
+- 2025-07-30: Refactor monolithic xaml-converter.ts into focused modules reducing complexity from 1,181 lines to 4 specialized modules
 - 2025-08-01: fix: duplicate "Database detected" messages in Electron app startup by tracking initial database detection log state
+- 2025-08-01: Refactor monolithic markdown-converter.ts (877 lines, complexity 35-45) into 3 focused modules with clear separation of concerns

@@ -442,9 +442,9 @@ export const AdvancedMode: React.FC<AdvancedModeProps> = ({
                           <SelectValue placeholder="Select date format" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="iso">ISO (2024-01-15T10:30:00Z)</SelectItem>
-                          <SelectItem value="locale">Locale (1/15/2024, 10:30 AM)</SelectItem>
-                          <SelectItem value="short">Short (Jan 15, 2024)</SelectItem>
+                          <SelectItem value="iso">ISO (2025-07-22T09:30:04.000Z)</SelectItem>
+                          <SelectItem value="locale">Locale (7/22/2025)</SelectItem>
+                          <SelectItem value="short">Short (2025-07-22)</SelectItem>
                         </SelectContent>
                       </Select>
                     </TooltipTrigger>

@@ -1,11 +1,12 @@
 import { getDefaults } from '@logos-notes-exporter/config';
 import type { OrganizedNote, NotebookGroup, FilePathInfo } from './types.js';
-import { XamlToMarkdownConverter } from './xaml-converter.js';
 import { type ImageProcessingFailure } from './xaml-image-processor.js';
-import { cleanXamlText } from './unicode-cleaner.js';
 import { MetadataProcessor, type MetadataLookups, type MetadataOptions } from './metadata-processor.js';
 import type { NotesToolDatabase } from './notestool-database.js';
 import type { CatalogDatabase } from './catalog-database.js';
+import { FrontmatterProcessor, type FrontmatterProcessorOptions } from './frontmatter-processor.js';
+import { ContentProcessor, type ContentProcessorOptions, type XamlConversionStats, type XamlConversionFailure } from './content-processor.js';
+import { ImageCoordinator, type ImageCoordinatorOptions, type MarkdownResult } from './image-coordinator.js';
 
 export interface MarkdownOptions {
   /** Include YAML frontmatter */
@@ -30,90 +31,27 @@ export interface MarkdownOptions {
   indentsNotQuotes: boolean;
 }
 
-export interface XamlConversionStats {
-  /** Total notes processed */
-  totalNotes: number;
-  /** Notes that contained Rich Text (XAML) content */
-  notesWithXaml: number;
-  /** Rich Text (XAML) notes successfully converted */
-  xamlConversionsSucceeded: number;
-  /** Rich Text (XAML) notes that failed conversion */
-  xamlConversionsFailed: number;
-  /** Notes with plain text only */
-  plainTextNotes: number;
-  /** Notes with empty content */
-  emptyNotes: number;
-  /** Total images found in XAML */
-  imagesFound: number;
-  /** Images successfully downloaded */
-  imagesDownloaded: number;
-  /** Images that failed to download */
-  imageDownloadsFailed: number;
-  /** Total size of downloaded images in MB */
-  totalImageSizeMB: number;
-}
-
-export interface XamlConversionFailure {
-  noteId: number;
-  noteTitle: string;
-  failureType: 'empty_content' | 'exception';
-  errorMessage?: string;
-  xamlContentPreview: string;
-}
-
-export interface MarkdownResult {
-  /** Final markdown content */
-  content: string;
-  /** YAML frontmatter object */
-  frontmatter: Record<string, unknown>;
-  /** Content without frontmatter */
-  body: string;
-  /** Word count */
-  wordCount: number;
-  /** Character count */
-  characterCount: number;
-}
+// Re-export types from modules for backward compatibility
+export type { XamlConversionStats, XamlConversionFailure } from './content-processor.js';
+export type { MarkdownResult } from './image-coordinator.js';
 
 export const DEFAULT_MARKDOWN_OPTIONS: MarkdownOptions = getDefaults.markdown();
 
 export class MarkdownConverter {
   private options: MarkdownOptions;
-  private xamlConverter: XamlToMarkdownConverter;
-  private metadataProcessor?: MetadataProcessor;
-  private xamlStats: XamlConversionStats;
+  private frontmatterProcessor: FrontmatterProcessor;
+  private contentProcessor: ContentProcessor;
+  private imageCoordinator: ImageCoordinator;
   private verbose: boolean;
-  private xamlFailures: XamlConversionFailure[];
   private onLog?: (message: string) => void;
 
   constructor(options: Partial<MarkdownOptions> = {}, database?: NotesToolDatabase, verbose: boolean = false, catalogDb?: CatalogDatabase, onLog?: (message: string) => void) {
     this.options = { ...DEFAULT_MARKDOWN_OPTIONS, ...options };
     this.verbose = verbose;
     this.onLog = onLog;
-    this.xamlConverter = new XamlToMarkdownConverter({
-      htmlSubSuperscript: this.options.htmlSubSuperscript,
-      convertIndentsToQuotes: !this.options.indentsNotQuotes,
-      downloadImages: true,
-      maxImageSizeMB: 10,
-      downloadTimeoutMs: 30000,
-      downloadRetries: 3,
-      onLog: this.onLog,
-      verbose: this.verbose
-    });
-    this.xamlFailures = [];
-    this.xamlStats = {
-      totalNotes: 0,
-      notesWithXaml: 0,
-      xamlConversionsSucceeded: 0,
-      xamlConversionsFailed: 0,
-      plainTextNotes: 0,
-      emptyNotes: 0,
-      imagesFound: 0,
-      imagesDownloaded: 0,
-      imageDownloadsFailed: 0,
-      totalImageSizeMB: 0
-    };
-    
+
     // Initialize enhanced metadata processor if database is provided
+    let metadataProcessor: MetadataProcessor | undefined;
     if (database) {
       try {
         const lookups: MetadataLookups = {
@@ -132,80 +70,86 @@ export class MarkdownConverter {
           dateFormat: this.options.dateFormat === 'iso' ? 'iso' : 'readable'
         };
         
-        this.metadataProcessor = new MetadataProcessor(metadataOptions, lookups, catalogDb);
+        metadataProcessor = new MetadataProcessor(metadataOptions, lookups, catalogDb);
       } catch (error) {
         console.warn('Failed to initialize enhanced metadata processor:', error);
       }
     }
+
+    // Initialize processors
+    const frontmatterOptions: FrontmatterProcessorOptions = {
+      includeFrontmatter: this.options.includeFrontmatter,
+      includeDates: this.options.includeDates,
+      includeKind: this.options.includeKind,
+      includeNotebook: this.options.includeNotebook,
+      includeId: this.options.includeId,
+      customFields: this.options.customFields,
+      dateFormat: this.options.dateFormat
+    };
+    this.frontmatterProcessor = new FrontmatterProcessor(frontmatterOptions, metadataProcessor);
+
+    const contentOptions: ContentProcessorOptions = {
+      includeMetadata: this.options.includeMetadata,
+      includeFrontmatter: this.options.includeFrontmatter,
+      includeDates: this.options.includeDates,
+      includeId: this.options.includeId,
+      includeNotebook: this.options.includeNotebook,
+      dateFormat: this.options.dateFormat,
+      htmlSubSuperscript: this.options.htmlSubSuperscript,
+      indentsNotQuotes: this.options.indentsNotQuotes
+    };
+    this.contentProcessor = new ContentProcessor(contentOptions, verbose, onLog);
+
+    const imageOptions: ImageCoordinatorOptions = {
+      htmlSubSuperscript: this.options.htmlSubSuperscript,
+      indentsNotQuotes: this.options.indentsNotQuotes,
+      maxImageSizeMB: 10,
+      downloadTimeoutMs: 30000,
+      downloadRetries: 3
+    };
+    this.imageCoordinator = new ImageCoordinator(imageOptions, verbose, onLog);
   }
 
-  /**
-   * Check if content contains Rich Text (XAML) patterns
-   */
-  private containsXamlContent(content: string): boolean {
-    if (!content || !content.trim()) return false;
-    
-    const xamlPatterns = [
-      /<Paragraph[^>]*>/i,
-      /<Run[^>]*>/i,
-      /<Span[^>]*>/i,
-      /Text="[^"]*"/i,
-      /<Section[^>]*>/i
-    ];
-
-    return xamlPatterns.some(pattern => pattern.test(content));
-  }
 
   /**
    * Get Rich Text (XAML) conversion statistics
    */
   public getXamlConversionStats(): XamlConversionStats {
-    return { ...this.xamlStats };
+    return this.contentProcessor.getXamlConversionStats();
   }
 
   /**
    * Get Rich Text (XAML) conversion failures
    */
   public getXamlConversionFailures(): XamlConversionFailure[] {
-    return [...this.xamlFailures];
+    return this.contentProcessor.getXamlConversionFailures();
   }
 
   /**
    * Get image processing failures
    */
   public getImageFailures(): ImageProcessingFailure[] {
-    return this.xamlConverter.getImageFailures();
+    const xamlConverter = this.contentProcessor.getXamlConverter();
+    return this.imageCoordinator.getImageFailures(xamlConverter);
   }
 
   /**
    * Reset Rich Text (XAML) conversion statistics
    */
   public resetXamlStats(): void {
-    this.xamlStats = {
-      totalNotes: 0,
-      notesWithXaml: 0,
-      xamlConversionsSucceeded: 0,
-      xamlConversionsFailed: 0,
-      plainTextNotes: 0,
-      emptyNotes: 0,
-      imagesFound: 0,
-      imagesDownloaded: 0,
-      imageDownloadsFailed: 0,
-      totalImageSizeMB: 0
-    };
-    this.xamlFailures = [];
+    this.contentProcessor.resetXamlStats();
   }
 
   /**
    * Convert an organized note to markdown
    */
   public convertNote(note: OrganizedNote, group: NotebookGroup, fileInfo: FilePathInfo): MarkdownResult {
-    const frontmatter = this.generateFrontmatter(note, group, fileInfo);
-    const body = this.generateBody(note, group, fileInfo);
+    const frontmatter = this.frontmatterProcessor.generateFrontmatter(note, group, fileInfo);
+    const body = this.contentProcessor.generateBody(note, group, fileInfo);
     
     let content = '';
     if (this.options.includeFrontmatter && Object.keys(frontmatter).length > 0) {
-      content += this.serializeFrontmatter(frontmatter);
+      content += this.frontmatterProcessor.serializeFrontmatter(frontmatter);
       content += '\n---\n\n';
     }
     content += body;
@@ -214,7 +158,7 @@ export class MarkdownConverter {
       content,
       frontmatter,
       body,
-      wordCount: this.countWords(body),
+      wordCount: this.contentProcessor.countWords(body),
       characterCount: body.length
     };
   }
@@ -223,18 +167,8 @@ export class MarkdownConverter {
    * Update the XAML converter with output directory and note filename for image processing
    */
   public updateXamlConverterForImages(outputDirectory: string, noteFilename: string): void {
-    this.xamlConverter = new XamlToMarkdownConverter({
-      htmlSubSuperscript: this.options.htmlSubSuperscript,
-      convertIndentsToQuotes: !this.options.indentsNotQuotes,
-      outputDirectory,
-      noteFilename,
-      downloadImages: true,
-      maxImageSizeMB: 10,
-      downloadTimeoutMs: 30000,
-      downloadRetries: 3,
-      onLog: this.onLog,
-      verbose: this.verbose
-    });
+    const xamlConverter = this.imageCoordinator.createXamlConverterForImages(outputDirectory, noteFilename);
+    this.contentProcessor.updateXamlConverter(xamlConverter);
   }
 
   /**
@@ -249,548 +183,47 @@ export class MarkdownConverter {
     // Update XAML converter with proper note directory and filename
     this.updateXamlConverterForImages(fileInfo.directory, fileInfo.filename + '.md');
     
-    // Clear any previous images from the converter
-    this.xamlConverter.clearCollectedImages();
-    
     // Convert the note (this will collect image placeholders)
     const result = this.convertNote(note, group, fileInfo);
     
-    // Process images only once, then replace in both content and body
-    // Process content once to download all images and get placeholder mappings
-    const processedContent = await this.xamlConverter.processCollectedImages(result.content);
-    
-    // Extract placeholder mappings from the processing
-    const placeholderMappings = this.extractPlaceholderMappings(result.content, processedContent);
-    
-    // Manually apply the same mappings to the body
-    const processedBody = this.applyPlaceholderMappings(result.body, placeholderMappings);
+    // Process images using the image coordinator
+    const xamlConverter = this.contentProcessor.getXamlConverter();
+    const processedResult = await this.imageCoordinator.convertNoteWithImages(
+      note, group, fileInfo, result, xamlConverter
+    );
     
     // Update image statistics
-    const imageStats = this.xamlConverter.getImageStats();
-    if (imageStats) {
-      this.xamlStats.imagesFound += imageStats.imagesFound;
-      this.xamlStats.imagesDownloaded += imageStats.imagesDownloaded;
-      this.xamlStats.imageDownloadsFailed += imageStats.imageDownloadsFailed;
-      this.xamlStats.totalImageSizeMB += imageStats.totalImageSizeMB;
-    }
+    this.contentProcessor.updateImageStats();
     
-    return {
-      ...result,
-      content: processedContent,
-      body: processedBody
-    };
+    return processedResult;
   }
 
-  /**
-   * Extract placeholder mappings from original and processed markdown
-   */
-  private extractPlaceholderMappings(original: string, processed: string): Map<string, string> {
-    const mappings = new Map<string, string>();
-    
-    // Find all placeholders in original markdown
-    const placeholderRegex = /!\[IMAGE_PLACEHOLDER_\d+\]\(\)/g;
-    const originalPlaceholders = original.match(placeholderRegex) || [];
-    
-    // Find all image references in processed markdown
-    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-    const processedImages: string[] = [];
-    let match;
-    while ((match = imageRegex.exec(processed)) !== null) {
-      processedImages.push(match[0]); // Full markdown image reference
-    }
-    
-    // Map placeholders to their replacements
-    for (let i = 0; i < originalPlaceholders.length && i < processedImages.length; i++) {
-      mappings.set(originalPlaceholders[i], processedImages[i]);
-    }
-    
-    return mappings;
-  }
-
-  /**
-   * Apply placeholder mappings to markdown text
-   */
-  private applyPlaceholderMappings(markdown: string, mappings: Map<string, string>): string {
-    let result = markdown;
-    
-    for (const [placeholder, replacement] of mappings) {
-      result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
-    }
-    
-    return result;
-  }
 
   /**
    * Process images in converted markdown asynchronously
    */
   public async processImagesInMarkdown(markdownResult: MarkdownResult, outputDirectory: string): Promise<MarkdownResult> {
-    // Initialize XAML converter with image processing options if not already done
-    if (!this.xamlConverter.getImageStats()) {
-      // We need to recreate the converter with image processing options
-      this.xamlConverter = new XamlToMarkdownConverter({
-        htmlSubSuperscript: this.options.htmlSubSuperscript,
-        convertIndentsToQuotes: !this.options.indentsNotQuotes,
-        outputDirectory,
-        noteFilename: 'temp', // Will be updated per note
-        downloadImages: true,
-        maxImageSizeMB: 10,
-        downloadTimeoutMs: 30000,
-        downloadRetries: 3,
-        onLog: this.onLog,
-        verbose: this.verbose
-      });
-    }
-
-    // Process any collected images
-    const processedContent = await this.xamlConverter.processCollectedImages(markdownResult.content);
-    const processedBody = await this.xamlConverter.processCollectedImages(markdownResult.body);
-
+    const processedResult = await this.imageCoordinator.processImagesInMarkdown(markdownResult, outputDirectory);
+    
     // Update image statistics
-    const imageStats = this.xamlConverter.getImageStats();
-    if (imageStats) {
-      this.xamlStats.imagesFound += imageStats.imagesFound;
-      this.xamlStats.imagesDownloaded += imageStats.imagesDownloaded;
-      this.xamlStats.imageDownloadsFailed += imageStats.imageDownloadsFailed;
-      this.xamlStats.totalImageSizeMB += imageStats.totalImageSizeMB;
-    }
-
-    return {
-      ...markdownResult,
-      content: processedContent,
-      body: processedBody
-    };
+    this.contentProcessor.updateImageStats();
+    
+    return processedResult;
   }
 
-  /**
-   * Generate YAML frontmatter for a note
-   */
-  private generateFrontmatter(note: OrganizedNote, group: NotebookGroup, fileInfo: FilePathInfo): Record<string, unknown> {
-    if (this.metadataProcessor) {
-      // Use enhanced metadata processor
-      const metadata = this.metadataProcessor.generateMetadata(note);
-      const frontmatter: Record<string, unknown> = { ...metadata };
-      
-      // Add file information
-      if (fileInfo.filename) {
-        frontmatter.filename = fileInfo.filename;
-      }
-      
-      // Add custom fields
-      Object.assign(frontmatter, this.options.customFields);
-      
-      return frontmatter;
-    } else {
-      // Fallback to basic frontmatter generation
-      return this.generateBasicFrontmatter(note, group, fileInfo);
-    }
-  }
 
-  /**
-   * Generate basic frontmatter when enhanced metadata processor is not available
-   */
-  private generateBasicFrontmatter(note: OrganizedNote, group: NotebookGroup, fileInfo: FilePathInfo): Record<string, unknown> {
-    const frontmatter: Record<string, unknown> = {};
 
-    // Title
-    frontmatter.title = note.formattedTitle || this.generateTitleFromReferences(note) || 'Untitled Note';
 
-    // Dates
-    if (this.options.includeDates) {
-      frontmatter.created = this.formatDate(note.createdDate);
-      if (note.modifiedDate) {
-        frontmatter.modified = this.formatDate(note.modifiedDate);
-      }
-    }
 
-    // Note kind/type
-    if (this.options.includeKind) {
-      frontmatter.noteType = this.getNoteTypeName(note.kind);
-    }
 
-    // Note ID
-    if (this.options.includeId) {
-      frontmatter.noteId = note.id;
-    }
 
-    // Notebook information
-    if (this.options.includeNotebook && group.notebook) {
-      frontmatter.notebook = group.notebook.title;
-    }
 
-    // References - always include when available
-    if (note.references.length > 0) {
-      frontmatter.references = note.references.map(ref => ref.formatted);
-    }
 
-    // Tags
-    const tags = this.extractTags(note);
-    if (tags.length > 0) {
-      frontmatter.tags = tags;
-    }
 
-    // File information
-    if (fileInfo.filename) {
-      frontmatter.filename = fileInfo.filename;
-    }
 
-    // Custom fields
-    Object.assign(frontmatter, this.options.customFields);
 
-    return frontmatter;
-  }
 
-  /**
-   * Generate the body content of the markdown note
-   */
-  private generateBody(note: OrganizedNote, group: NotebookGroup, _fileInfo?: FilePathInfo): string {
-    const sections: string[] = [];
 
-    // Track this note in Rich Text (XAML) conversion statistics
-    this.xamlStats.totalNotes++;
-
-    // Add title as H1 if not including frontmatter
-    if (!this.options.includeFrontmatter) {
-      const title = note.formattedTitle || this.generateTitleFromReferences(note) || 'Untitled Note';
-      sections.push(`# ${title}\n`);
-    }
-
-    // Add metadata section if enabled
-    if (this.options.includeMetadata && !this.options.includeFrontmatter) {
-      sections.push(this.generateMetadataSection(note, group));
-    }
-
-    // Add references section if not in frontmatter - always include when available
-    if (note.references.length > 0 && !this.options.includeFrontmatter) {
-      sections.push(this.generateReferencesSection(note));
-    }
-
-    // Add main content with Rich Text (XAML)-to-Markdown conversion and tracking
-    if (note.contentRichText && note.contentRichText.trim()) {
-      const hasXaml = this.containsXamlContent(note.contentRichText);
-      
-      if (hasXaml) {
-        this.xamlStats.notesWithXaml++;
-        
-        try {
-          const convertedContent = this.xamlConverter.convertToMarkdown(note.contentRichText);
-          if (convertedContent.trim()) {
-            this.xamlStats.xamlConversionsSucceeded++;
-            sections.push(convertedContent.trim());
-          } else {
-            this.xamlStats.xamlConversionsFailed++;
-            if (this.verbose) {
-              this.xamlFailures.push({
-                noteId: note.id,
-                noteTitle: note.formattedTitle || 'Untitled',
-                failureType: 'empty_content',
-                xamlContentPreview: note.contentRichText.substring(0, 150)
-              });
-            }
-            sections.push('*[This note contains formatting that could not be converted.]*');
-          }
-        } catch (error) {
-          this.xamlStats.xamlConversionsFailed++;
-          if (this.verbose) {
-            this.xamlFailures.push({
-              noteId: note.id,
-              noteTitle: note.formattedTitle || 'Untitled',
-              failureType: 'exception',
-              errorMessage: error instanceof Error ? error.message : String(error),
-              xamlContentPreview: note.contentRichText.substring(0, 150)
-            });
-          }
-          // If Rich Text (XAML) conversion fails, extract plain text as fallback
-          const plainText = this.extractPlainTextFromXaml(note.contentRichText);
-          if (plainText.trim()) {
-            sections.push(plainText.trim());
-          } else {
-            sections.push('*[This note contains content that could not be processed.]*');
-          }
-        }
-      } else {
-        // Plain text content, no Rich Text (XAML)
-        this.xamlStats.plainTextNotes++;
-        sections.push(note.contentRichText.trim());
-      }
-    } else {
-      // If no content, add a note about it (unless it's a highlight - they get special treatment)
-      if (note.kind !== 1) {
-        this.xamlStats.emptyNotes++;
-        sections.push('*[This note appears to be empty.]*');
-      } else {
-        this.xamlStats.emptyNotes++;
-      }
-    }
-
-    // Add highlight information if present
-    if (note.kind === 1) {
-      // Extract reference for highlighted passage - only use actual Bible references
-      let reference = '';
-      if (note.references.length > 0 && note.references[0]) {
-        const formattedRef = note.references[0].formatted;
-        if (typeof formattedRef === 'string' && formattedRef.trim()) {
-          reference = formattedRef.trim();
-        }
-      }
-      
-      if (reference) {
-        sections.push(`Highlighted passage: ${reference}`);
-      } else {
-        sections.push('This is a highlighted passage');
-      }
-    }
-
-    return sections.join('\n\n');
-  }
-
-  /**
-   * Generate metadata section for markdown body
-   */
-  private generateMetadataSection(note: OrganizedNote, group: NotebookGroup): string {
-    const lines = ['## Metadata\n'];
-
-    lines.push(`**Type:** ${this.getNoteTypeName(note.kind)}  `);
-    lines.push(`**Created:** ${this.formatDate(note.createdDate)}  `);
-    if (note.modifiedDate) {
-      lines.push(`**Modified:** ${this.formatDate(note.modifiedDate)}  `);
-    }
-
-    if (group.notebook) {
-      lines.push(`**Notebook:** ${group.notebook.title || 'Untitled'}  `);
-    }
-
-    if (this.options.includeId) {
-      lines.push(`**ID:** ${note.id}  `);
-    }
-
-    return lines.join('\n');
-  }
-
-  /**
-   * Generate references section for markdown body
-   */
-  private generateReferencesSection(note: OrganizedNote): string {
-    const lines = ['## References\n'];
-    
-    for (const ref of note.references) {
-      lines.push(`- ${ref.formatted}`);
-    }
-
-    return lines.join('\n');
-  }
-
-  /**
-   * Serialize frontmatter to YAML
-   */
-  private serializeFrontmatter(frontmatter: Record<string, unknown>): string {
-    const lines = ['---'];
-    
-    // Define the preferred field order for better readability
-    const fieldOrder = [
-      'title', 'created', 'modified', 'tags', 'noteType', 'references', 
-      'noteId', 'notebook', 'logosBibleBook', 'bibleVersion', 'noteStyle', 
-      'noteColor', 'noteIndicator', 'dataType', 'resourceId', 'resourceTitle', 'anchorLink', 'filename'
-    ];
-    
-    // Add fields in the preferred order first
-    for (const key of fieldOrder) {
-      if (frontmatter[key] !== null && frontmatter[key] !== undefined) {
-        lines.push(this.serializeYamlValue(key, frontmatter[key], 0));
-      }
-    }
-    
-    // Add any remaining fields that weren't in the preferred order
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (value === null || value === undefined || fieldOrder.includes(key)) {
-        continue;
-      }
-      
-      lines.push(this.serializeYamlValue(key, value, 0));
-    }
-    
-    return lines.join('\n');
-  }
-
-  /**
-   * Serialize a YAML value with proper formatting
-   */
-  private serializeYamlValue(key: string, value: unknown, indent: number = 0): string {
-    const prefix = '  '.repeat(indent);
-    
-    if (value === null || value === undefined) {
-      return `${prefix}${key}: null`;
-    }
-    
-    if (typeof value === 'string') {
-      // Escape quotes and handle multiline strings
-      if (value.includes('\n') || value.includes('"') || value.includes('\'')) {
-        const escapedValue = value.replace(/"/g, '\\"');
-        return `${prefix}${key}: "${escapedValue}"`;
-      }
-      return `${prefix}${key}: "${value}"`;
-    }
-    
-    if (typeof value === 'number' || typeof value === 'boolean') {
-      return `${prefix}${key}: ${value}`;
-    }
-    
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return `${prefix}${key}: []`;
-      }
-      
-      const lines = [`${prefix}${key}:`];
-      for (const item of value) {
-        if (typeof item === 'object' && item !== null) {
-          lines.push(`${prefix}  -`);
-          for (const [subKey, subValue] of Object.entries(item)) {
-            lines.push(this.serializeYamlValue(subKey, subValue, indent + 2));
-          }
-        } else {
-          lines.push(`${prefix}  - ${this.formatYamlScalar(item)}`);
-        }
-      }
-      return lines.join('\n');
-    }
-    
-    if (typeof value === 'object') {
-      const lines = [`${prefix}${key}:`];
-      for (const [subKey, subValue] of Object.entries(value)) {
-        lines.push(this.serializeYamlValue(subKey, subValue, indent + 1));
-      }
-      return lines.join('\n');
-    }
-    
-    return `${prefix}${key}: ${String(value)}`;
-  }
-
-  /**
-   * Format a scalar value for YAML
-   */
-  private formatYamlScalar(value: unknown): string {
-    if (typeof value === 'string') {
-      if (value.includes('"') || value.includes('\'') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '\\"')}"`;
-      }
-      return `"${value}"`;
-    }
-    return String(value);
-  }
-
-  /**
-   * Get human-readable note type name
-   */
-  private getNoteTypeName(kind: number): string {
-    switch (kind) {
-      case 0: return 'note';
-      case 1: return 'highlight';
-      case 2: return 'annotation';
-      default: return 'unknown';
-    }
-  }
-
-  /**
-   * Format date according to options
-   */
-  private formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    
-    switch (this.options.dateFormat) {
-      case 'locale':
-        return date.toLocaleDateString();
-      case 'short': {
-        const isoString = date.toISOString();
-        return isoString.split('T')[0] || isoString; // YYYY-MM-DD
-      }
-      case 'iso':
-      default:
-        return date.toISOString();
-    }
-  }
-
-  /**
-   * Generate a title from references if no title exists
-   */
-  private generateTitleFromReferences(note: OrganizedNote): string | null {
-    if (note.references.length === 0) return null;
-    
-    // Use the first reference as title
-    const firstRef = note.references[0];
-    if (firstRef && firstRef.formatted) {
-      return String(firstRef.formatted);
-    }
-    return null;
-  }
-
-  /**
-   * Extract plain text from Rich Text (XAML) as fallback
-   */
-  private extractPlainTextFromXaml(xaml: string): string {
-    if (!xaml) return '';
-    
-    // Extract text from Text attributes
-    const textMatches = xaml.match(/Text="([^"]*?)"/g) || [];
-    const texts = textMatches.map(match => 
-      cleanXamlText(match.replace(/Text="([^"]*?)"/, '$1').trim())
-    ).filter(text => text);
-
-    return texts.join(' ');
-  }
-
-  /**
-   * Extract tags from a note (placeholder for future implementation)
-   */
-  private extractTags(note: OrganizedNote): string[] {
-    // For now, return basic tags based on note type and content
-    const tags: string[] = [];
-
-    // Add note type tag
-    switch (note.kind) {
-      case 0:
-        tags.push('note');
-        break;
-      case 1:
-        tags.push('highlight');
-        break;
-      case 2:
-        tags.push('annotation');
-        break;
-      default:
-        tags.push('note');
-    }
-
-    // Add reference-based tags
-    if (note.references.length > 0) {
-      tags.push('scripture');
-      
-      // Add book tags for unique books
-      const books = [...new Set(note.references.map(ref => ref.bookName).filter(Boolean))];
-      for (const book of books.slice(0, 3)) { // Limit to 3 book tags
-        if (book && typeof book === 'string') {
-          tags.push(book.toLowerCase().replace(/\s+/g, '-'));
-        }
-      }
-    }
-
-    return tags;
-  }
-
-  /**
-   * Count words in text
-   */
-  private countWords(text: string): number {
-    if (!text || text.trim().length === 0) return 0;
-    
-    // Remove markdown formatting and count words
-    const plainText = text
-      .replace(/[#*_`~]/g, '') // Remove markdown characters
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Replace links with text
-      .trim();
-    
-    if (plainText.length === 0) return 0;
-    
-    return plainText.split(/\s+/).length;
-  }
 
   /**
    * Update converter options
