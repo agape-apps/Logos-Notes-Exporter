@@ -359,3 +359,8 @@ pnpm run binary:all
 2. Add test cases for new book numbers
 3. Verify against sample references in database
 4. Update documentation in `docs/bible-books-mapping.md`
+
+## Communication
+
+- Use at least one friendly emoji per response to maintain a positive interaction 😊
+- Always greet me with "Hi, Sir Christian, I am <exact LLM model name (cutoff month)>. Get the exact model name from the environment and add the month of your knowledge cutoff in brackets.
