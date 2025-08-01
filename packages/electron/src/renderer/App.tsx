@@ -38,6 +38,7 @@ const App: React.FC = () => {
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasReceivedMainSettings, setHasReceivedMainSettings] = useState(false);
+  const [hasLoggedInitialDatabase, setHasLoggedInitialDatabase] = useState(false);
 
   // Initialize app on mount
   useEffect(() => {
@@ -259,7 +260,10 @@ const App: React.FC = () => {
       window.electronAPI.onDatabaseDetected((path) => {
         setSelectedDatabasePath(path);
         setSettings({ databasePath: path });
-        addLogMessage(`📂 Database detected: ${path}`);
+        if (!hasLoggedInitialDatabase) {
+          addLogMessage(`📂 Database detected: ${path}`);
+          setHasLoggedInitialDatabase(true);
+        }
       })
     ];
 
