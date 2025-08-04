@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { BrowserWindow } from 'electron';
 import { 
   LogosNotesExporter,
@@ -97,7 +98,7 @@ export async function executeExport(
   // TODO: check if this failsafe is still needed. Check logs.
   if (settings.outputDirectory === './Logos-Exported-Notes' || 
       settings.outputDirectory === '/Users/user/Documents') {
-    const correctedPath = path.join(require('os').homedir(), 'Documents');
+    const correctedPath = path.join(os.homedir(), 'Documents');
     console.log('🛡️ Export handler failsafe: Correcting output directory from', settings.outputDirectory, 'to', correctedPath);
     settings = { ...settings, outputDirectory: correctedPath };
   }

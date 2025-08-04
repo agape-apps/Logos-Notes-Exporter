@@ -2,8 +2,8 @@
 
 ## HIGH PRIORITY - BUGS & ISSUES
 
-- [ ] Refactor large files into smaller files
-- [ ] Fix validation issues: 📋 Validation FAILED - 31 files checked, 2 errors ❌ Errors found: Note count mismatch: expected 29, found 31 (REPRODUCE)
+- [ ] Refactor large files into smaller files (MOSTLY DONE)
+- [ ] Check if validation issues still happen: 📋 Validation FAILED - 31 files checked, 2 errors ❌ Errors found: Note count mismatch: expected 29, found 31 (REPRODUCE)
 - [ ] *Output Directory* is shown incorrectly as `/Users/user/Documents` after *Restore Defaults* is clicked, but the correct directory is actually used
 - [x] Create a subfolder always: Manual selection without creating a default folder could cause problems: /Users/christian/Documents/Test Output
 - [x] Change LogosNotesExporter CLI command to Logos-Notes-Exporter for consistency
