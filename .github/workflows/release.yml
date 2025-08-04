@@ -83,11 +83,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-13
             target: darwin-x64
             arch: x64
             artifact_name: Logos-Notes-Exporter-electron-macos-x64
-          - os: macos-latest
+          - os: macos-14
             target: darwin-arm64
             arch: arm64
             artifact_name: Logos-Notes-Exporter-electron-macos-arm64
@@ -122,9 +122,18 @@ jobs:
         run: pnpm --filter @logos-notes-exporter/electron run build
 
       - name: Create Electron distributables
-        run: pnpm --filter @logos-notes-exporter/electron run make
+        run: pnpm --filter @logos-notes-exporter/electron run make -- --arch=${{ matrix.arch }} --platform=darwin
+        if: matrix.os != 'windows-latest'
         env:
-          ELECTRON_BUILDER_ARCH: ${{ matrix.arch }}
+          npm_config_target_arch: ${{ matrix.arch }}
+          npm_config_target_platform: darwin
+
+      - name: Create Electron distributables (Windows)
+        run: pnpm --filter @logos-notes-exporter/electron run make -- --arch=${{ matrix.arch }} --platform=win32
+        if: matrix.os == 'windows-latest'
+        env:
+          npm_config_target_arch: ${{ matrix.arch }}
+          npm_config_target_platform: win32
 
       - name: Find and prepare artifacts
         id: find-artifacts

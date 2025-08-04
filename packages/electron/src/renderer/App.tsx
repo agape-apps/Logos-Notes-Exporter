@@ -403,7 +403,7 @@ const App: React.FC = () => {
                 <p className="text-sm text-muted-foreground">Convert your Logos notes to Markdown files</p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-xs text-muted-foreground">v1.2.1</div>
+                <div className="text-xs text-muted-foreground">v1.3.1</div>
               </div>
             </div>
           </div>
