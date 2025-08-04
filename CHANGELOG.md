@@ -40,3 +40,4 @@
 - 2025-07-30: Refactor monolithic xaml-converter.ts into focused modules reducing complexity from 1,181 lines to 4 specialized modules
 - 2025-08-01: fix: duplicate "Database detected" messages in Electron app startup by tracking initial database detection log state
 - 2025-08-01: Refactor monolithic markdown-converter.ts (877 lines, complexity 35-45) into 3 focused modules with clear separation of concerns
+- Release v1.3.1: Refactored large files, added Electron publishing via Github Actions
