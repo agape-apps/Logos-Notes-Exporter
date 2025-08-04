@@ -140,7 +140,13 @@ jobs:
         run: |
           cd packages/electron
           
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          echo "=== Debugging info ==="
+          echo "Matrix OS: ${{ matrix.os }}"
+          echo "Artifact name: ${{ matrix.artifact_name }}"
+          echo "Available files in out/:"
+          find out -type f | head -10
+          
+          if [[ "${{ matrix.os }}" == macos-* ]]; then
             # Find the ZIP file created by Electron Forge
             ZIP_FILE=$(find out -name "*.zip" -type f | head -1)
             if [ -n "$ZIP_FILE" ]; then
