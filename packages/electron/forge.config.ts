@@ -22,6 +22,10 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
+      // Fix for scoped package names - use simple name without @ and /
+      name: 'Logos-Notes-Exporter',
+      authors: 'cwagner',
+      description: 'Electron desktop application for Logos Notes Exporter - Convert Logos notes to Markdown with GUI',
       // Windows installer icons
       setupIcon: './images/icon.ico',
     }),
